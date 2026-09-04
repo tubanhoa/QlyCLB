@@ -1,7 +1,7 @@
 /**
  * attendance.js - Quản lý điểm danh
  */
-if (!requireAuth()) throw new Error('Not authenticated');
+if (!requireRole(['chu_nhiem', 'truong_ban'])) throw new Error('Not authorized');
 document.getElementById('sidebar').innerHTML = getSidebarHTML('attendance');
 
 let currentActivityId = null;

@@ -1,8 +1,9 @@
 """
 Router: Notifications - Quản lý thông báo
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from typing import Optional
 from database import get_db
 from models import Notification, User
 from schemas import NotificationCreate
@@ -13,11 +14,31 @@ router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
 
 @router.get("")
 def get_notifications(
+    search: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query("created_at"),
+    order: Optional[str] = Query("desc"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Lấy danh sách thông báo"""
-    notifications = db.query(Notification).order_by(Notification.created_at.desc()).all()
+    """Lấy danh sách thông báo (hỗ trợ tìm kiếm và sắp xếp)"""
+    query = db.query(Notification)
+
+    if search:
+        query = query.filter(
+            (Notification.title.contains(search)) |
+            (Notification.content.contains(search))
+        )
+
+    sort_col = Notification.created_at
+    if sort_by == "title":
+        sort_col = Notification.title
+
+    if order == "asc":
+        query = query.order_by(sort_col.asc())
+    else:
+        query = query.order_by(sort_col.desc())
+
+    notifications = query.all()
 
     result = []
     for n in notifications:

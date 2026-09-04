@@ -19,9 +19,13 @@
                     </div>
                     <div class="chatbot-header-info">
                         <h1>UniClub Assistant</h1>
-                        <p><span class="status-dot"></span> Trợ lý ảo CLB Sinh viên — Luôn sẵn sàng hỗ trợ bạn!</p>
+                        <p><span class="status-dot"></span><span id="chatbot-status-text">Trợ lý CLB Sinh viên · Sẵn sàng hỗ trợ</span></p>
                     </div>
                 </div>
+            <div class="chatbot-header-actions">
+                <button type="button" class="btn btn-outline btn-sm chatbot-header-btn" onclick="resetChat()" title="Xóa đoạn chat và bắt đầu lại">
+                    🔄 Làm mới chat
+                </button>
                 <a href="/login.html" class="btn btn-outline chatbot-login-btn" id="btn-go-system">
                     🔐 Vào hệ thống
                 </a>
@@ -33,17 +37,57 @@
             <div class="chatbot-messages" id="chat-messages">
                 <!-- Welcome message injected by JS -->
             </div>
+            <!-- Scroll to bottom button -->
+            <button type="button" class="btn-scroll-bottom" id="btn-scroll-bottom" onclick="scrollToBottomSmooth()" title="Cuộn xuống tin nhắn mới">
+                ↓
+            </button>
         </main>
 
         <!-- Input Area -->
         <footer class="chatbot-input-area" id="chatbot-input-area">
             <div class="chatbot-input-inner">
+                <!-- Categorized Quick Topic Section -->
+                <div class="chatbot-quick-section">
+                    <div class="quick-category-tabs">
+                        <button type="button" class="category-tab-btn active" onclick="switchCategoryTab('all', this)">🌟 Tất cả</button>
+                        <button type="button" class="category-tab-btn" onclick="switchCategoryTab('concerns', this)">❓ Nỗi lo tân binh</button>
+                        <button type="button" class="category-tab-btn" onclick="switchCategoryTab('departments', this)">🏢 Chọn ban</button>
+                        <button type="button" class="category-tab-btn" onclick="switchCategoryTab('procedures', this)">📋 Thủ tục & Điểm</button>
+                    </div>
+
+                    <div class="chatbot-quick-topics" id="quick-topics">
+                        <!-- Group: Nỗi lo tân binh -->
+                        <button type="button" class="quick-topic-btn group-concerns" onclick="quickAsk('Chưa có kinh nghiệm, chưa biết gì có tham gia CLB được không?')">❓ Chưa có kinh nghiệm</button>
+                        <button type="button" class="quick-topic-btn group-concerns" onclick="quickAsk('Tham gia CLB có bị trùng lịch học hay rớt môn không ạ?')">📚 Cân bằng học tập & GPA</button>
+                        <button type="button" class="quick-topic-btn group-concerns" onclick="quickAsk('Tham gia CLB có mất phí hay phải đóng tiền quỹ gì không?')">💰 Có mất phí không?</button>
+                        <button type="button" class="quick-topic-btn group-concerns" onclick="quickAsk('Quyền lợi thực tế khi tham gia CLB là gì, có giấy chứng nhận không?')">🎁 Quyền lợi tham gia</button>
+                        <button type="button" class="quick-topic-btn group-concerns" onclick="quickAsk('Phỏng vấn vào CLB thường hỏi những câu gì và làm sao để đỗ?')">🎤 Mẹo phỏng vấn</button>
+                        <button type="button" class="quick-topic-btn group-concerns" onclick="quickAsk('Em học khoa Kinh tế/trái ngành có tham gia được không?')">🌐 Học trái ngành</button>
+
+                        <!-- Group: Chọn ban -->
+                        <button type="button" class="quick-topic-btn group-departments" onclick="quickAsk('Mình nên vào ban nào phù hợp với sở thích?')">💡 Tư vấn chọn ban</button>
+                        <button type="button" class="quick-topic-btn group-departments" onclick="quickAsk('Ban Kỹ thuật làm những gì và có yêu cầu gì không?')">💻 Ban Kỹ thuật (Dev/AI)</button>
+                        <button type="button" class="quick-topic-btn group-departments" onclick="quickAsk('Ban Truyền thông làm những gì và cần phần mềm gì?')">🎨 Ban Truyền thông (Media)</button>
+                        <button type="button" class="quick-topic-btn group-departments" onclick="quickAsk('Ban Sự kiện có những hoạt động gì và cơ hội nào?')">🎪 Ban Sự kiện (MC/Event)</button>
+                        <button type="button" class="quick-topic-btn group-departments" onclick="quickAsk('Ban Đối ngoại làm những công việc gì?')">🤝 Ban Đối ngoại (Sponsor)</button>
+                        <button type="button" class="quick-topic-btn group-departments" onclick="quickAsk('Ban Học thuật có hoạt động gì và hỗ trợ NCKH thế nào?')">📚 Ban Học thuật (NCKH)</button>
+
+                        <!-- Group: Thủ tục & Điểm -->
+                        <button type="button" class="quick-topic-btn group-procedures" onclick="quickAsk('Sắp tới CLB có những hoạt động hay sự kiện gì?')">📅 Hoạt động sắp tới</button>
+                        <button type="button" class="quick-topic-btn group-procedures" onclick="quickAsk('Tham gia CLB được cộng bao nhiêu điểm rèn luyện?')">⭐ Điểm rèn luyện</button>
+                        <button type="button" class="quick-topic-btn group-procedures" onclick="quickAsk('Mẫu tin nhắn xin phép nghỉ sinh hoạt CLB?')">✉️ Mẫu đơn xin nghỉ</button>
+                        <button type="button" class="quick-topic-btn group-procedures" onclick="quickAsk('Thời gian và địa điểm sinh hoạt CLB diễn ra khi nào?')">⏱️ Lịch sinh hoạt CLB</button>
+                        <button type="button" class="quick-topic-btn group-procedures" onclick="quickAsk('Một kỳ có được đăng ký nhiều ban hoặc sau này xin chuyển ban được không?')">🔄 Đổi/chuyển ban</button>
+                    </div>
+                </div>
+
                 <div class="chatbot-input-wrapper">
                     <textarea
                         id="chat-input"
                         placeholder="Hỏi bất cứ điều gì về CLB..."
                         rows="1"
                         maxlength="500"
+                        aria-label="Nhập câu hỏi cho UniClub Assistant"
                     ></textarea>
                     <button class="chatbot-send-btn" id="btn-send" onclick="sendMessage()" title="Gửi tin nhắn">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -52,8 +96,11 @@
                         </svg>
                     </button>
                 </div>
-                <div class="chatbot-input-hint">
-                    Nhấn <kbd>Enter</kbd> để gửi · <kbd>Shift+Enter</kbd> để xuống dòng
+                <div class="chatbot-input-meta">
+                    <div class="chatbot-input-hint">
+                        Nhấn <kbd>Enter</kbd> để gửi · <kbd>Shift+Enter</kbd> để xuống dòng
+                    </div>
+                    <span id="chat-character-count" class="chat-character-count">0/500</span>
                 </div>
             </div>
         </footer>

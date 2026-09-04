@@ -32,6 +32,15 @@
                             <h3>📢 AI Sinh thông báo hoạt động</h3>
                         </div>
                         <div style="padding: 24px;">
+                            <!-- Presets Bar for Notification -->
+                            <div class="ai-preset-bar">
+                                <span class="ai-preset-label">⚡ Mẫu gợi ý nhanh:</span>
+                                <button type="button" class="ai-preset-btn" onclick="fillNotiPreset('workshop')">💡 Workshop Python</button>
+                                <button type="button" class="ai-preset-btn" onclick="fillNotiPreset('hackathon')">🏆 Hackathon AI</button>
+                                <button type="button" class="ai-preset-btn" onclick="fillNotiPreset('teambuilding')">🏕️ Teambuilding</button>
+                                <button type="button" class="ai-preset-btn" onclick="fillNotiPreset('meeting')">📢 Họp toàn thể CLB</button>
+                            </div>
+
                             <div class="form-group">
                                 <label>Tên hoạt động *</label>
                                 <input type="text" class="form-control" id="ai-noti-name" placeholder="VD: Workshop Python cơ bản">
@@ -61,7 +70,10 @@
                     </div>
 
                     <div class="ai-result" id="result-notification" style="display: none;">
-                        <h4>🤖 Kết quả từ AI</h4>
+                        <div class="ai-result-header">
+                            <h4>🤖 Kết quả từ AI</h4>
+                            <button type="button" class="btn-copy-result" onclick="copyAIResult('result-notification-content', this)">📋 Sao chép kết quả</button>
+                        </div>
                         <div id="result-notification-content"></div>
                         <div style="margin-top: 16px; display: flex; gap: 10px;">
                             <button class="btn btn-success" onclick="useNotification()">📨 Sử dụng thông báo</button>
@@ -77,6 +89,14 @@
                             <h3>📋 AI Tóm tắt hoạt động</h3>
                         </div>
                         <div style="padding: 24px;">
+                            <!-- Presets Bar for Summarize -->
+                            <div class="ai-preset-bar">
+                                <span class="ai-preset-label">⚡ Mẫu gợi ý nhanh:</span>
+                                <button type="button" class="ai-preset-btn" onclick="fillSumPreset('workshop')">💡 Workshop Git & GitHub</button>
+                                <button type="button" class="ai-preset-btn" onclick="fillSumPreset('contest')">🏆 Cuộc thi Ý tưởng AI</button>
+                                <button type="button" class="ai-preset-btn" onclick="fillSumPreset('volunteer')">🤝 Chiến dịch Tình nguyện</button>
+                            </div>
+
                             <div class="form-group">
                                 <label>Chọn hoạt động</label>
                                 <select class="form-control" id="ai-sum-activity" onchange="fillActivityData()">
@@ -110,7 +130,10 @@
                     </div>
 
                     <div class="ai-result" id="result-summarize" style="display: none;">
-                        <h4>🤖 Tóm tắt từ AI</h4>
+                        <div class="ai-result-header">
+                            <h4>🤖 Tóm tắt từ AI</h4>
+                            <button type="button" class="btn-copy-result" onclick="copyAIResult('result-summarize-content', this)">📋 Sao chép kết quả</button>
+                        </div>
                         <div id="result-summarize-content"></div>
                     </div>
                 </div>
@@ -122,6 +145,14 @@
                             <h3>👥 AI Gợi ý phân công nhiệm vụ</h3>
                         </div>
                         <div style="padding: 24px;">
+                            <!-- Presets Bar for Task Assignment -->
+                            <div class="ai-preset-bar">
+                                <span class="ai-preset-label">⚡ Mẫu gợi ý nhanh:</span>
+                                <button type="button" class="ai-preset-btn" onclick="fillAssignPreset('welcome')">🎪 Chào tân sinh viên</button>
+                                <button type="button" class="ai-preset-btn" onclick="fillAssignPreset('training')">💻 Đào tạo AI Hands-on</button>
+                                <button type="button" class="ai-preset-btn" onclick="fillAssignPreset('talkshow')">🎙️ Talkshow Doanh nghiệp</button>
+                            </div>
+
                             <div class="form-group">
                                 <label>Chọn hoạt động</label>
                                 <select class="form-control" id="ai-assign-activity">
@@ -130,7 +161,7 @@
                             </div>
                             <div class="form-group">
                                 <label>Mô tả hoạt động (hoặc bổ sung thông tin)</label>
-                                <textarea class="form-control" id="ai-assign-info" placeholder="Mô tả chi tiết về hoạt động để AI gợi ý chính xác hơn"></textarea>
+                                <textarea class="form-control" id="ai-assign-info" placeholder="Mô tả chi tiết về hoạt động để AI gợi ý chính sau hơn"></textarea>
                             </div>
                             <div class="form-group">
                                 <label>Danh sách nhiệm vụ cần phân công</label>
@@ -143,9 +174,12 @@
                     </div>
 
                     <div class="ai-result" id="result-assign" style="display: none;">
-                        <h4>🤖 Gợi ý phân công từ AI</h4>
+                        <div class="ai-result-header">
+                            <h4>🤖 Gợi ý phân công từ AI</h4>
+                            <button type="button" class="btn-copy-result" onclick="copyAIResult('result-assign-content', this)">📋 Sao chép kết quả</button>
+                        </div>
                         <div id="result-assign-content"></div>
-                        <div style="margin-top: 16px;">
+                        <div style="margin-top: 16px; display: flex; gap: 10px;">
                             <button class="btn btn-success" onclick="confirmAssignment()">✅ Xác nhận phân công</button>
                             <button class="btn btn-outline" onclick="suggestAssignment()">🔄 Gợi ý lại</button>
                         </div>

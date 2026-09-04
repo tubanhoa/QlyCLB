@@ -17,10 +17,12 @@ def get_members(
     department_id: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query("id"),
+    order: Optional[str] = Query("asc"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Lấy danh sách thành viên (có lọc)"""
+    """Lấy danh sách thành viên (hỗ trợ tìm kiếm, lọc và sắp xếp)"""
     query = db.query(Member)
 
     # Trưởng ban chỉ xem thành viên ban mình
@@ -48,6 +50,18 @@ def get_members(
     # Lọc theo trạng thái
     if status:
         query = query.filter(Member.status == status)
+
+    # Sắp xếp
+    sort_column = Member.id
+    if sort_by == "name":
+        sort_column = Member.name
+    elif sort_by == "join_date":
+        sort_column = Member.join_date
+
+    if order == "desc":
+        query = query.order_by(sort_column.desc())
+    else:
+        query = query.order_by(sort_column.asc())
 
     members = query.all()
 
@@ -160,6 +174,12 @@ def update_member(
         update_data = member_data.model_dump(exclude_unset=True)
     else:
         update_data = member_data.model_dump(exclude_unset=True)
+
+    # Kiểm tra email trùng nếu có thay đổi email
+    if "email" in update_data and update_data["email"] and update_data["email"] != member.email:
+        duplicate = db.query(Member).filter(Member.email == update_data["email"], Member.id != member_id).first()
+        if duplicate:
+            raise HTTPException(status_code=400, detail="Email này đã được sử dụng bởi thành viên khác")
 
     for key, value in update_data.items():
         setattr(member, key, value)

@@ -1,7 +1,7 @@
 /**
  * departments.js - Quản lý ban chuyên môn
  */
-if (!requireAuth()) throw new Error('Not authenticated');
+if (!requireRole(['chu_nhiem', 'truong_ban'])) throw new Error('Not authorized');
 document.getElementById('sidebar').innerHTML = getSidebarHTML('departments');
 
 let allDepts = [];
@@ -46,6 +46,9 @@ async function loadDepartments() {
 
 function renderTable() {
     const tbody = document.getElementById('deptTable');
+    const user = getUser();
+    const isAdmin = user && user.role === 'chu_nhiem';
+
     if (allDepts.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="empty-icon">🏢</div><h4>Chưa có ban nào</h4></td></tr>';
         return;
@@ -60,8 +63,10 @@ function renderTable() {
             <td><span class="badge badge-info">${d.member_count} người</span></td>
             <td>
                 <button class="btn btn-ghost btn-sm" onclick="viewDept(${d.id})" title="Chi tiết">👁️</button>
-                <button class="btn btn-ghost btn-sm" onclick="editDept(${d.id})" title="Sửa">✏️</button>
-                <button class="btn btn-ghost btn-sm" onclick="deleteDept(${d.id})" title="Xóa">🗑️</button>
+                ${isAdmin ? `
+                    <button class="btn btn-ghost btn-sm" onclick="editDept(${d.id})" title="Sửa">✏️</button>
+                    <button class="btn btn-ghost btn-sm" onclick="deleteDept(${d.id})" title="Xóa">🗑️</button>
+                ` : ''}
             </td>
         </tr>
     `).join('');

@@ -8,7 +8,12 @@ let allNotifications = [];
 
 async function loadNotifications() {
     try {
-        allNotifications = await apiCall('/api/notifications') || [];
+        const searchInput = document.getElementById('searchNotification');
+        const search = searchInput ? searchInput.value.trim() : '';
+        let url = '/api/notifications?';
+        if (search) url += `search=${encodeURIComponent(search)}&`;
+
+        allNotifications = await apiCall(url) || [];
         renderNotifications();
     } catch (err) {
         console.error(err);
@@ -97,6 +102,15 @@ async function deleteNotification(id) {
         showToast('Xóa thông báo thành công!', 'success');
         await loadNotifications();
     } catch (err) {}
+}
+
+// Search event
+const searchInput = document.getElementById('searchNotification');
+if (searchInput) {
+    searchInput.addEventListener('input', function() {
+        clearTimeout(this._timer);
+        this._timer = setTimeout(loadNotifications, 300);
+    });
 }
 
 loadNotifications();

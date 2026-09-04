@@ -18,10 +18,13 @@ def get_tasks(
     assigned_to: Optional[int] = Query(None),
     status: Optional[str] = Query(None),
     priority: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query("deadline"),
+    order: Optional[str] = Query("asc"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Lấy danh sách nhiệm vụ"""
+    """Lấy danh sách nhiệm vụ (hỗ trợ tìm kiếm, lọc và sắp xếp)"""
     query = db.query(Task)
 
     # Thành viên chỉ xem nhiệm vụ được giao
@@ -53,7 +56,29 @@ def get_tasks(
     if priority:
         query = query.filter(Task.priority == priority)
 
-    tasks = query.order_by(Task.deadline.asc()).all()
+    if search:
+        query = query.filter(
+            (Task.name.contains(search)) |
+            (Task.description.contains(search))
+        )
+
+    # Sắp xếp
+    sort_column = Task.deadline
+    if sort_by == "priority":
+        sort_column = Task.priority
+    elif sort_by == "progress":
+        sort_column = Task.progress
+    elif sort_by == "name":
+        sort_column = Task.name
+    elif sort_by == "id":
+        sort_column = Task.id
+
+    if order == "desc":
+        query = query.order_by(sort_column.desc())
+    else:
+        query = query.order_by(sort_column.asc())
+
+    tasks = query.all()
 
     result = []
     for t in tasks:

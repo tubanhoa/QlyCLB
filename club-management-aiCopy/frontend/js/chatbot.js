@@ -3,10 +3,12 @@
  * Standalone — không yêu cầu auth.js
  */
 
-const CHAT_API = 'http://localhost:8000/api/ai/chat';
+const CHAT_API = '/api/ai/chat';
+const CHAT_TIMEOUT_MS = 30000;
 
 // ==================== STATE ====================
 let isLoading = false;
+let activeRequest = null;
 
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,7 +19,9 @@ function initChatbot() {
     // Auto-resize textarea
     const input = document.getElementById('chat-input');
     input.addEventListener('input', autoResizeTextarea);
+    input.addEventListener('input', updateCharacterCount);
     input.addEventListener('keydown', handleKeyDown);
+    updateCharacterCount();
 
     // Show welcome message
     showWelcomeMessage();
@@ -27,21 +31,28 @@ function initChatbot() {
 function showWelcomeMessage() {
     const welcomeData = {
         answer: (
-            "Xin chào! 👋 Mình là **UniClub Assistant** — trợ lý ảo của Hệ thống Quản lý CLB Sinh viên!\n\n" +
-            "Mình có thể giúp bạn:\n" +
-            "- 📋 Tìm hiểu về **các ban chuyên môn** trong CLB\n" +
-            "- 📅 Xem **lịch hoạt động, sự kiện** sắp tới\n" +
-            "- 🎯 **Tư vấn ban phù hợp** dựa trên sở thích\n" +
-            "- 📝 Hướng dẫn **đăng ký tham gia** CLB\n" +
-            "- ✅ Giải đáp về **điểm danh, điểm rèn luyện**\n\n" +
-            "Hãy hỏi mình bất cứ điều gì nhé! 😊"
+            "Xin chào bạn! 👋 Mình là **UniClub Assistant** — Trợ lý ảo chính thức của CLB Sinh viên!\n\n" +
+            "Bạn đang băn khoăn hay có thắc mắc khi muốn tham gia CLB? Đừng ngần ngại, mình ở đây để đồng hành và gỡ rối mọi nỗi lo cho bạn:\n\n" +
+            "- ❓ **'Chưa có kinh nghiệm / Chưa biết gì':** Có tham gia được không? (Khẳng định: *100% được!*)\n" +
+            "- 📚 **'Cân bằng học tập & CLB':** Có bị trùng lịch học hay ảnh hưởng GPA không?\n" +
+            "- 💰 **'Chi phí & Quỹ':** Tham gia CLB có mất phí gì không?\n" +
+            "- 🎁 **'Quyền lợi thực tế':** Điểm rèn luyện, giấy chứng nhận Đoàn trường, cơ hội thực tập sớm.\n" +
+            "- 🎤 **'Phỏng vấn':** Vòng phỏng vấn thường hỏi gì và mẹo ghi điểm cao?\n" +
+            "- 🎯 **'Định hướng ban':** Tư vấn ban chuyên môn phù hợp nhất với sở thích và đam mê của bạn.\n\n" +
+            "💡 *Hãy bấm vào các nút chủ đề nhanh phía dưới hoặc hỏi mình bất cứ điều gì bạn đang băn khoăn nhé!* 😊"
         ),
-        suggestedClubs: [],
+        suggestedClubs: [
+            {"maDinhDanh": "DEPT_1", "tenClb": "Ban Truyền thông", "lyDoGoiY": "Sáng tạo nội dung, thiết kế Figma, video TikTok"},
+            {"maDinhDanh": "DEPT_2", "tenClb": "Ban Kỹ thuật", "lyDoGoiY": "Đào tạo lập trình Web, App, AI từ con số 0"},
+            {"maDinhDanh": "DEPT_3", "tenClb": "Ban Sự kiện", "lyDoGoiY": "Tổ chức chương trình, dẫn MC, kết nối bạn bè"}
+        ],
         followUpQuestions: [
-            "CLB có những ban chuyên môn nào?",
-            "Sắp tới có hoạt động gì không?",
-            "Mình thích lập trình thì nên vào ban gì?",
-            "Làm sao để đăng ký tham gia CLB?"
+            "Chưa có kinh nghiệm có tham gia CLB được không?",
+            "Tham gia CLB có bị trùng lịch học không?",
+            "Tham gia CLB có mất phí gì không?",
+            "Quyền lợi thực tế khi tham gia CLB là gì?",
+            "Phỏng vấn CLB thường hỏi những câu gì?",
+            "Em học khoa Kinh tế/trái ngành có tham gia được không?"
         ]
     };
     renderBotMessage(welcomeData);
@@ -67,11 +78,15 @@ async function sendMessage() {
     const typingEl = showTypingIndicator();
 
     try {
+        activeRequest = new AbortController();
+        const timeoutId = setTimeout(() => activeRequest.abort(), CHAT_TIMEOUT_MS);
         const response = await fetch(CHAT_API, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message })
+            body: JSON.stringify({ message }),
+            signal: activeRequest.signal
         });
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             throw new Error(`Server error: ${response.status}`);
@@ -87,10 +102,14 @@ async function sendMessage() {
 
     } catch (error) {
         console.error('Chat error:', error);
-        typingEl.remove();
+        if (typingEl.isConnected) typingEl.remove();
+
+        const errorMessage = error.name === 'AbortError'
+            ? 'Phản hồi đang mất nhiều thời gian hơn dự kiến. Bạn thử gửi lại câu hỏi nhé.'
+            : 'Mình chưa kết nối được với hệ thống. Bạn thử lại sau hoặc liên hệ Ban chủ nhiệm CLB nhé.';
 
         renderBotMessage({
-            answer: "Xin lỗi bạn, mình đang gặp sự cố kết nối. 😥\n\nBạn hãy thử lại sau hoặc liên hệ trực tiếp Ban chủ nhiệm CLB nhé!",
+            answer: `**Chưa nhận được phản hồi**\n\n${errorMessage}`,
             suggestedClubs: [],
             followUpQuestions: [
                 "Thử lại câu hỏi trước",
@@ -98,6 +117,7 @@ async function sendMessage() {
             ]
         });
     } finally {
+        activeRequest = null;
         isLoading = false;
         updateSendButton();
         document.getElementById('chat-input').focus();
@@ -133,22 +153,41 @@ function renderBotMessage(data) {
             <div class="chat-text">${renderMarkdown(data.answer)}</div>
     `;
 
-    // Suggested clubs
+    // Suggested clubs (interactive cards)
     if (data.suggestedClubs && data.suggestedClubs.length > 0) {
         html += '<div class="chat-clubs">';
-        html += '<div class="chat-clubs-title">🏫 Gợi ý cho bạn:</div>';
+        html += '<div class="chat-clubs-title">🏫 Ban chuyên môn phù hợp dành cho bạn:</div>';
         html += '<div class="chat-clubs-grid">';
         data.suggestedClubs.forEach(club => {
+            const safeName = escapeHtml(club.tenClb);
+            const safeReason = escapeHtml(club.lyDoGoiY);
+            const safeId = escapeHtml(club.maDinhDanh || '');
             html += `
-                <div class="chat-club-card">
-                    <div class="chat-club-name">${escapeHtml(club.tenClb)}</div>
-                    <div class="chat-club-reason">${escapeHtml(club.lyDoGoiY)}</div>
-                    <div class="chat-club-id">${escapeHtml(club.maDinhDanh)}</div>
+                <div class="chat-club-card" onclick="askAboutClub('${safeId}')" title="Bấm để tìm hiểu chi tiết về ${safeName}" role="button" tabindex="0">
+                    <div class="chat-club-header">
+                        <span class="chat-club-badge">Đề xuất</span>
+                        ${safeId ? `<span class="chat-club-id">${safeId}</span>` : ''}
+                    </div>
+                    <div class="chat-club-name">${safeName}</div>
+                    <div class="chat-club-reason">${safeReason}</div>
+                    <div class="chat-club-action">👉 Bấm để hỏi thêm về ban này</div>
                 </div>
             `;
         });
         html += '</div></div>';
     }
+
+    // Action toolbar inside bot message
+    html += `
+        <div class="chat-bubble-actions">
+            <button type="button" class="bubble-action-btn" onclick="copyBotAnswer(this)" title="Sao chép toàn bộ câu trả lời">
+                📋 Sao chép
+            </button>
+            <button type="button" class="bubble-action-btn" onclick="toggleUseful(this)" title="Đánh giá câu trả lời hữu ích">
+                👍 Hữu ích
+            </button>
+        </div>
+    `;
 
     html += '</div>';
 
@@ -195,11 +234,126 @@ function showTypingIndicator() {
     return typingEl;
 }
 
-// ==================== FOLLOW-UP ====================
+// ==================== ACTIONS & CONVENIENCE BUTTONS ====================
+function switchCategoryTab(category, tabBtn) {
+    document.querySelectorAll('.category-tab-btn').forEach(btn => btn.classList.remove('active'));
+    tabBtn.classList.add('active');
+
+    const allButtons = document.querySelectorAll('.quick-topic-btn');
+    allButtons.forEach(btn => {
+        if (category === 'all' || btn.classList.contains(`group-${category}`)) {
+            btn.style.display = 'inline-flex';
+        } else {
+            btn.style.display = 'none';
+        }
+    });
+}
+
+function resetChat() {
+    const container = document.getElementById('chat-messages');
+    container.innerHTML = '';
+    showWelcomeMessage();
+    const input = document.getElementById('chat-input');
+    input.value = '';
+    input.style.height = 'auto';
+    input.focus();
+}
+
+function copyBotAnswer(btn) {
+    const bubble = btn.closest('.chat-bubble-bot');
+    if (!bubble) return;
+    const textEl = bubble.querySelector('.chat-text');
+    if (!textEl) return;
+
+    const textToCopy = textEl.innerText || textEl.textContent;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = 'Đã chép! ✓';
+        btn.classList.add('active-action');
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.remove('active-action');
+        }, 2000);
+    });
+}
+
+function toggleUseful(btn) {
+    if (btn.classList.contains('active-action')) {
+        btn.classList.remove('active-action');
+        btn.innerHTML = '👍 Hữu ích';
+    } else {
+        btn.classList.add('active-action');
+        btn.innerHTML = '❤️ Cảm ơn bạn!';
+    }
+}
+
+function scrollToBottomSmooth() {
+    const area = document.getElementById('chat-area');
+    area.scrollTo({
+        top: area.scrollHeight,
+        behavior: 'smooth'
+    });
+}
+
 function askFollowUp(btn) {
     const question = btn.textContent;
-    document.getElementById('chat-input').value = question;
+    quickAsk(question);
+}
+
+function askAboutClub(clubName) {
+    const question = `Hãy tư vấn chi tiết hơn về ban ${clubName}, các hoạt động thực tế và yêu cầu tham gia.`;
+    quickAsk(question);
+}
+
+function quickAsk(text) {
+    const input = document.getElementById('chat-input');
+    input.value = text;
+    autoResizeTextarea();
     sendMessage();
+}
+
+// Sao chép khối mã / văn bản mẫu
+function copyCode(btn) {
+    const container = btn.closest('.chat-code-block');
+    if (!container) return;
+    const codeEl = container.querySelector('code');
+    if (!codeEl) return;
+
+    const textToCopy = codeEl.innerText || codeEl.textContent;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = 'Đã sao chép! ✓';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.remove('copied');
+        }, 2000);
+    }).catch(err => {
+        console.error('Copy failed:', err);
+    });
+}
+
+// ==================== HELPERS ====================
+function initScrollWatcher() {
+    const area = document.getElementById('chat-area');
+    const scrollBtn = document.getElementById('btn-scroll-bottom');
+    if (!area || !scrollBtn) return;
+
+    area.addEventListener('scroll', () => {
+        const distanceToBottom = area.scrollHeight - area.scrollTop - area.clientHeight;
+        if (distanceToBottom > 150) {
+            scrollBtn.classList.add('visible');
+        } else {
+            scrollBtn.classList.remove('visible');
+        }
+    });
+}
+
+// Gọi lắng nghe cuộn khi tải trang
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initScrollWatcher);
+} else {
+    initScrollWatcher();
 }
 
 // ==================== HELPERS ====================
@@ -207,6 +361,12 @@ function autoResizeTextarea() {
     const textarea = document.getElementById('chat-input');
     textarea.style.height = 'auto';
     textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+}
+
+function updateCharacterCount() {
+    const input = document.getElementById('chat-input');
+    const count = document.getElementById('chat-character-count');
+    if (count) count.textContent = `${input.value.length}/500`;
 }
 
 function handleKeyDown(e) {
@@ -236,10 +396,11 @@ function scrollToBottom() {
     const area = document.getElementById('chat-area');
     setTimeout(() => {
         area.scrollTop = area.scrollHeight;
-    }, 50);
+    }, 60);
 }
 
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
@@ -248,19 +409,55 @@ function escapeHtml(text) {
 function renderMarkdown(text) {
     if (!text) return '';
 
-    let html = escapeHtml(text);
+    // 1. Tách và bảo toàn các khối code blocks (```...```)
+    const codeBlocks = [];
+    let processed = text.replace(/```([a-zA-Z]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+        const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+        codeBlocks.push({ lang: lang || 'text', code });
+        return placeholder;
+    });
 
-    // Bold: **text**
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // 2. Escape HTML các phần text thông thường
+    processed = escapeHtml(processed);
 
-    // Italic: *text*
-    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    // 3. Headers: ### và ##
+    processed = processed.replace(/^### (.*?)$/gm, '<h3 class="chat-h3">$1</h3>');
+    processed = processed.replace(/^## (.*?)$/gm, '<h2 class="chat-h2">$1</h2>');
 
-    // Line breaks
-    html = html.replace(/\n/g, '<br>');
+    // 4. Bold: **text**
+    processed = processed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-    // Bullet points: lines starting with - or *
-    html = html.replace(/^- (.*?)(<br>|$)/gm, '<span class="chat-bullet">•</span> $1$2');
+    // 5. Italic: *text*
+    processed = processed.replace(/\*(.*?)\*/g, '<em>$1</em>');
 
-    return html;
+    // 6. Inline code: `code`
+    processed = processed.replace(/`([^`]+)`/g, '<code class="chat-inline-code">$1</code>');
+
+    // 7. Bullet points: lines starting with - or *
+    processed = processed.replace(/^[\-\*] (.*?)$/gm, '<div class="chat-list-item"><span class="chat-bullet">•</span> $1</div>');
+
+    // 8. Numbered lists: 1. 2. 3.
+    processed = processed.replace(/^(\d+)\. (.*?)$/gm, '<div class="chat-list-item"><span class="chat-num">$1.</span> $2</div>');
+
+    // 9. Line breaks (giữ các thẻ khối div, h2, h3 sạch sẽ)
+    processed = processed.replace(/\n\n/g, '<div class="chat-spacer"></div>');
+    processed = processed.replace(/\n/g, '<br>');
+
+    // 10. Khôi phục các khối code blocks với header và nút sao chép
+    codeBlocks.forEach((block, idx) => {
+        const placeholder = `__CODE_BLOCK_${idx}__`;
+        const langLabel = block.lang.toUpperCase() || 'MẪU VĂN BẢN';
+        const renderedBlock = `
+            <div class="chat-code-block">
+                <div class="chat-code-header">
+                    <span>📋 ${langLabel}</span>
+                    <button type="button" class="chat-code-copy-btn" onclick="copyCode(this)">📋 Sao chép</button>
+                </div>
+                <pre class="chat-code-pre"><code>${escapeHtml(block.code.trim())}</code></pre>
+            </div>
+        `;
+        processed = processed.replace(placeholder, renderedBlock);
+    });
+
+    return processed;
 }

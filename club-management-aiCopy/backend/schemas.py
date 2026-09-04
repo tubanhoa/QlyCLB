@@ -1,7 +1,7 @@
 """
 Pydantic Schemas - Validation cho request/response
 """
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
 
@@ -231,7 +231,7 @@ class AIResponse(BaseModel):
 
 # ==================== CHATBOT ====================
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(min_length=1, max_length=500)
 
 
 class AnalyzeMemberEngagementRequest(BaseModel):

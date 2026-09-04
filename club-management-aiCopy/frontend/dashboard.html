@@ -3,9 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Dashboard - Hệ thống Quản lý Câu lạc bộ Sinh viên">
+    <meta name="description" content="Dashboard & Báo cáo Thống kê - Hệ thống Quản lý Câu lạc bộ Sinh viên">
     <title>Dashboard | CLB Manager</title>
     <link rel="stylesheet" href="/css/style.css">
+    <!-- Chart.js cho biểu đồ thống kê trực quan -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin: 24px 0;
+        }
+        @media (max-width: 992px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow-md);
+            position: relative;
+        }
+        .chart-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chart-container {
+            position: relative;
+            height: 260px;
+            width: 100%;
+        }
+        /* Report Modal Print Styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #reportModal, #reportModal * {
+                visibility: visible;
+            }
+            #reportModal {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: white !important;
+                color: black !important;
+            }
+            .modal-footer, .modal-close {
+                display: none !important;
+            }
+        }
+        .report-section {
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .report-section h4 {
+            color: var(--primary-light);
+            margin-bottom: 10px;
+            font-size: 1.05rem;
+        }
+    </style>
 </head>
 <body>
     <div class="app-layout">
@@ -15,10 +82,11 @@
             <header class="topbar">
                 <div>
                     <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
-                    <h1 class="page-title"><span class="emoji">📊</span> Dashboard</h1>
+                    <h1 class="page-title"><span class="emoji">📊</span> Dashboard & Thống Kê</h1>
                 </div>
                 <div class="topbar-actions">
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);" id="greeting"></span>
+                    <span style="font-size: 0.85rem; color: var(--text-secondary); margin-right: 8px;" id="greeting"></span>
+                    <button class="btn btn-outline btn-sm" onclick="openReportModal()" title="Xem và in báo cáo tổng hợp">📄 Xuất Báo Cáo CLB</button>
                 </div>
             </header>
 
@@ -29,7 +97,7 @@
                         <div class="stat-icon blue">👥</div>
                         <div class="stat-info">
                             <h3 id="stat-members">—</h3>
-                            <p>Thành viên</p>
+                            <p>Thành viên hoạt động</p>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -43,14 +111,14 @@
                         <div class="stat-icon green">📅</div>
                         <div class="stat-info">
                             <h3 id="stat-activities">—</h3>
-                            <p>Hoạt động</p>
+                            <p>Tổng hoạt động</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon orange">📋</div>
                         <div class="stat-info">
                             <h3 id="stat-tasks">—</h3>
-                            <p>Nhiệm vụ</p>
+                            <p>Tổng nhiệm vụ</p>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -66,6 +134,29 @@
                             <h3 id="stat-notifications">—</h3>
                             <p>Thông báo</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Visual Charts Section (Chart.js) -->
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3><span>🏢</span> Cơ Cấu Thành Viên Theo Ban</h3>
+                        <div class="chart-container">
+                            <canvas id="deptChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3><span>📋</span> Phân Bổ Trạng Thái Nhiệm Vụ</h3>
+                        <div class="chart-container">
+                            <canvas id="taskChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card" style="margin-bottom: 24px;">
+                    <h3><span>✅</span> Tỷ Lệ Tham Gia Điểm Danh Các Hoạt Động (%)</h3>
+                    <div class="chart-container" style="height: 220px;">
+                        <canvas id="attendanceChart"></canvas>
                     </div>
                 </div>
 
@@ -130,6 +221,23 @@
         </main>
     </div>
 
+    <!-- Modal Xuất Báo Cáo Tổng Hợp -->
+    <div class="modal-overlay" id="reportModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>📑 Báo Cáo Tổng Kết Hoạt Động CLB</h3>
+                <button class="modal-close" onclick="closeModal('reportModal')">✕</button>
+            </div>
+            <div class="modal-body" id="reportBody" style="max-height: 70vh; overflow-y: auto;">
+                <p style="text-align: center; color: var(--text-muted);">Đang tổng hợp số liệu báo cáo...</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('reportModal')">Đóng</button>
+                <button class="btn btn-primary" onclick="window.print()">🖨️ In / Xuất Báo Cáo</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/js/auth.js"></script>
     <script>
         if (!requireAuth()) throw new Error('Not authenticated');
@@ -143,23 +251,31 @@
         let greet = hour < 12 ? 'Chào buổi sáng' : hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
         document.getElementById('greeting').textContent = `${greet}, ${user.username}! 👋`;
 
-        // Load stats
+        let cachedStats = null;
+        let cachedActivities = [];
+        let cachedTasks = [];
+
+        // Load stats & render charts
         async function loadDashboard() {
             try {
-                // Stats
+                // 1. Stats
                 const stats = await apiCall('/api/dashboard/stats');
                 if (stats) {
+                    cachedStats = stats;
                     document.getElementById('stat-members').textContent = stats.total_members;
                     document.getElementById('stat-departments').textContent = stats.total_departments;
                     document.getElementById('stat-activities').textContent = stats.total_activities;
                     document.getElementById('stat-tasks').textContent = stats.total_tasks;
                     document.getElementById('stat-completed').textContent = stats.completed_tasks;
                     document.getElementById('stat-notifications').textContent = stats.total_notifications;
+
+                    renderCharts(stats);
                 }
 
-                // Recent activities
+                // 2. Recent activities
                 const activities = await apiCall('/api/activities');
                 if (activities) {
+                    cachedActivities = activities;
                     const upcoming = activities.filter(a => a.status === 'upcoming' || a.status === 'ongoing').slice(0, 5);
                     const tbody = document.getElementById('recentActivities');
                     if (upcoming.length === 0) {
@@ -175,9 +291,10 @@
                     }
                 }
 
-                // Recent tasks
+                // 3. Recent tasks
                 const tasks = await apiCall('/api/tasks');
                 if (tasks) {
+                    cachedTasks = tasks;
                     const inProgress = tasks.filter(t => t.status === 'in_progress' || t.status === 'not_started').slice(0, 5);
                     const tbody2 = document.getElementById('recentTasks');
                     if (inProgress.length === 0) {
@@ -193,7 +310,7 @@
                     }
                 }
 
-                // Recent notifications
+                // 4. Recent notifications
                 const notifications = await apiCall('/api/notifications');
                 if (notifications) {
                     const recent = notifications.slice(0, 3);
@@ -216,6 +333,209 @@
             } catch (err) {
                 console.error('Dashboard load error:', err);
             }
+        }
+
+        // Render visual Chart.js graphs
+        function renderCharts(stats) {
+            // Chart 1: Department distribution (Doughnut)
+            if (stats.department_distribution && stats.department_distribution.length > 0) {
+                const deptCtx = document.getElementById('deptChart').getContext('2d');
+                new Chart(deptCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: stats.department_distribution.map(d => d.name),
+                        datasets: [{
+                            data: stats.department_distribution.map(d => d.count),
+                            backgroundColor: [
+                                '#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'
+                            ],
+                            borderColor: '#1e293b',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Chart 2: Task status distribution (Bar)
+            if (stats.task_distribution) {
+                const taskCtx = document.getElementById('taskChart').getContext('2d');
+                new Chart(taskCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Chưa bắt đầu', 'Đang thực hiện', 'Hoàn thành', 'Quá hạn'],
+                        datasets: [{
+                            label: 'Số lượng nhiệm vụ',
+                            data: [
+                                stats.task_distribution.not_started || 0,
+                                stats.task_distribution.in_progress || 0,
+                                stats.task_distribution.completed || 0,
+                                stats.task_distribution.overdue || 0
+                            ],
+                            backgroundColor: ['#64748b', '#f59e0b', '#10b981', '#ef4444'],
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+                            y: { ticks: { color: '#94a3b8', stepSize: 1 }, grid: { color: '#334155' } }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+
+            // Chart 3: Attendance rates across activities (Bar)
+            if (stats.attendance_overview && stats.attendance_overview.length > 0) {
+                const attCtx = document.getElementById('attendanceChart').getContext('2d');
+                new Chart(attCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: stats.attendance_overview.map(a => a.activity_name),
+                        datasets: [{
+                            label: 'Tỷ lệ tham gia (%)',
+                            data: stats.attendance_overview.map(a => a.rate),
+                            backgroundColor: '#06b6d4',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+                            y: { min: 0, max: 100, ticks: { color: '#94a3b8', callback: v => v + '%' }, grid: { color: '#334155' } }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Open executive report modal
+        function openReportModal() {
+            if (!cachedStats) {
+                showToast('Dữ liệu đang tải, vui lòng thử lại sau', 'info');
+                return;
+            }
+
+            const nowStr = new Date().toLocaleDateString('vi-VN', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            });
+
+            const deptList = (cachedStats.department_distribution || []).map(d =>
+                `<li><strong>${d.name}:</strong> ${d.count} thành viên</li>`
+            ).join('');
+
+            const taskTotal = cachedStats.total_tasks || 1;
+            const completionRate = Math.round(((cachedStats.completed_tasks || 0) / taskTotal) * 100);
+
+            let attTableRows = '<tr><td colspan="4" style="text-align:center;">Chưa có dữ liệu điểm danh</td></tr>';
+            if (cachedStats.attendance_overview && cachedStats.attendance_overview.length > 0) {
+                attTableRows = cachedStats.attendance_overview.map(a => `
+                    <tr>
+                        <td><strong>${a.activity_name}</strong></td>
+                        <td>${a.present}/${a.total}</td>
+                        <td>${a.absent} vắng / ${a.excused} phép</td>
+                        <td><strong style="color: var(--success);">${a.rate}%</strong></td>
+                    </tr>
+                `).join('');
+            }
+
+            document.getElementById('reportBody').innerHTML = `
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="color: var(--text-primary); margin-bottom: 4px;">BÁO CÁO TỔNG KẾT HOẠT ĐỘNG CÂU LẠC BỘ</h2>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Thời điểm lập báo cáo: ${nowStr} | Người trích xuất: ${user.username} (${user.role})</p>
+                </div>
+
+                <div class="report-section">
+                    <h4>1. Tổng quan nhân sự & cơ cấu tổ chức</h4>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 12px;">
+                        <div style="background: var(--bg-card-hover); padding: 12px; border-radius: 8px;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Thành viên hoạt động</span>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary-light);">${cachedStats.total_members}</div>
+                        </div>
+                        <div style="background: var(--bg-card-hover); padding: 12px; border-radius: 8px;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Ban chuyên môn</span>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-light);">${cachedStats.total_departments}</div>
+                        </div>
+                        <div style="background: var(--bg-card-hover); padding: 12px; border-radius: 8px;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Thành viên ngừng HĐ</span>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-secondary);">${cachedStats.total_inactive_members || 0}</div>
+                        </div>
+                    </div>
+                    <ul style="padding-left: 20px; line-height: 1.8; color: var(--text-secondary);">
+                        ${deptList}
+                    </ul>
+                </div>
+
+                <div class="report-section">
+                    <h4>2. Tiến độ thực hiện nhiệm vụ</h4>
+                    <p style="color: var(--text-secondary); margin-bottom: 8px;">
+                        Tổng số nhiệm vụ đã giao: <strong>${cachedStats.total_tasks}</strong>. Tỷ lệ hoàn thành nhiệm vụ đạt: <strong style="color: var(--success);">${completionRate}%</strong>.
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+                        <div style="background: var(--bg-card-hover); padding: 8px; border-radius: 6px; text-align: center;">
+                            <small style="color: var(--text-muted);">Chưa bắt đầu</small>
+                            <div style="font-weight: 700;">${cachedStats.not_started_tasks || 0}</div>
+                        </div>
+                        <div style="background: var(--bg-card-hover); padding: 8px; border-radius: 6px; text-align: center;">
+                            <small style="color: var(--warning);">Đang thực hiện</small>
+                            <div style="font-weight: 700; color: var(--warning);">${cachedStats.in_progress_tasks || 0}</div>
+                        </div>
+                        <div style="background: var(--bg-card-hover); padding: 8px; border-radius: 6px; text-align: center;">
+                            <small style="color: var(--success);">Hoàn thành</small>
+                            <div style="font-weight: 700; color: var(--success);">${cachedStats.completed_tasks || 0}</div>
+                        </div>
+                        <div style="background: var(--bg-card-hover); padding: 8px; border-radius: 6px; text-align: center;">
+                            <small style="color: var(--danger);">Quá hạn</small>
+                            <div style="font-weight: 700; color: var(--danger);">${cachedStats.overdue_tasks || 0}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <h4>3. Tổng kết hoạt động và tỷ lệ chuyên cần</h4>
+                    <p style="color: var(--text-secondary); margin-bottom: 8px;">
+                        Tổng số hoạt động: <strong>${cachedStats.total_activities}</strong> (Đã hoàn thành: ${cachedStats.completed_activities || 0}, Sắp diễn ra: ${cachedStats.upcoming_activities || 0}).
+                    </p>
+                    <table style="width: 100%; font-size: 0.9rem;">
+                        <thead>
+                            <tr>
+                                <th>Tên hoạt động</th>
+                                <th>Có mặt</th>
+                                <th>Vắng / Phép</th>
+                                <th>Tỷ lệ tham gia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${attTableRows}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top: 20px; font-style: italic; color: var(--text-muted); font-size: 0.85rem; text-align: right;">
+                    Hệ thống Quản lý Câu lạc bộ Sinh viên có tích hợp AI
+                </div>
+            `;
+
+            openModal('reportModal');
         }
 
         loadDashboard();

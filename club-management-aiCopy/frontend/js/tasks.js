@@ -29,11 +29,30 @@ async function loadData() {
 
 async function loadTasks() {
     try {
+        const search = document.getElementById('searchTask') ? document.getElementById('searchTask').value.trim() : '';
         const status = document.getElementById('filterStatus').value;
         const priority = document.getElementById('filterPriority').value;
+        const sortVal = document.getElementById('sortTask') ? document.getElementById('sortTask').value : 'deadline_asc';
+
+        let sortBy = 'deadline';
+        let order = 'asc';
+        if (sortVal === 'deadline_desc') {
+            sortBy = 'deadline';
+            order = 'desc';
+        } else if (sortVal === 'priority_desc') {
+            sortBy = 'priority';
+            order = 'desc';
+        } else if (sortVal === 'progress_desc') {
+            sortBy = 'progress';
+            order = 'desc';
+        }
+
         let url = '/api/tasks?';
+        if (search) url += `search=${encodeURIComponent(search)}&`;
         if (status) url += `status=${status}&`;
         if (priority) url += `priority=${priority}&`;
+        if (sortBy) url += `sort_by=${sortBy}&`;
+        if (order) url += `order=${order}&`;
 
         allTasks = await apiCall(url) || [];
 
@@ -95,7 +114,20 @@ function renderTable() {
     `).join('');
 }
 
+function setTaskFormReadOnly(isReadOnly) {
+    ['taskName', 'taskDesc', 'taskActivity', 'taskAssignee', 'taskDeadline', 'taskPriority'].forEach(fieldId => {
+        const el = document.getElementById(fieldId);
+        if (el) el.disabled = isReadOnly;
+    });
+}
+
 function openAddTask() {
+    const user = getUser();
+    if (user && user.role === 'thanh_vien') {
+        showToast('Chỉ Chủ nhiệm hoặc Trưởng ban mới có quyền tạo nhiệm vụ!', 'error');
+        return;
+    }
+    setTaskFormReadOnly(false);
     document.getElementById('taskModalTitle').textContent = 'Thêm nhiệm vụ';
     document.getElementById('taskEditId').value = '';
     document.getElementById('taskName').value = '';
@@ -112,7 +144,14 @@ function openAddTask() {
 function editTask(id) {
     const t = allTasks.find(x => x.id === id);
     if (!t) return;
-    document.getElementById('taskModalTitle').textContent = 'Sửa nhiệm vụ';
+
+    const user = getUser();
+    const isMember = user && user.role === 'thanh_vien';
+
+    // Thành viên chỉ được sửa tiến độ & trạng thái
+    setTaskFormReadOnly(isMember);
+
+    document.getElementById('taskModalTitle').textContent = isMember ? 'Cập nhật tiến độ nhiệm vụ' : 'Sửa nhiệm vụ';
     document.getElementById('taskEditId').value = t.id;
     document.getElementById('taskName').value = t.name;
     document.getElementById('taskDesc').value = t.description || '';
@@ -128,18 +167,33 @@ function editTask(id) {
 async function saveTask() {
     const id = document.getElementById('taskEditId').value;
     const deadlineVal = document.getElementById('taskDeadline').value;
-    const data = {
-        name: document.getElementById('taskName').value,
-        description: document.getElementById('taskDesc').value || null,
-        activity_id: document.getElementById('taskActivity').value ? parseInt(document.getElementById('taskActivity').value) : null,
-        assigned_to: document.getElementById('taskAssignee').value ? parseInt(document.getElementById('taskAssignee').value) : null,
-        deadline: deadlineVal ? new Date(deadlineVal).toISOString() : null,
-        priority: document.getElementById('taskPriority').value,
-        status: document.getElementById('taskStatus').value,
-        progress: parseInt(document.getElementById('taskProgress').value) || 0
-    };
+    const user = getUser();
+    const isMember = user && user.role === 'thanh_vien';
 
-    if (!data.name) { showToast('Vui lòng nhập tên nhiệm vụ', 'error'); return; }
+    let data;
+    if (isMember) {
+        // Thành viên chỉ gửi status và progress
+        data = {
+            status: document.getElementById('taskStatus').value,
+            progress: parseInt(document.getElementById('taskProgress').value) || 0
+        };
+    } else {
+        data = {
+            name: document.getElementById('taskName').value,
+            description: document.getElementById('taskDesc').value || null,
+            activity_id: document.getElementById('taskActivity').value ? parseInt(document.getElementById('taskActivity').value) : null,
+            assigned_to: document.getElementById('taskAssignee').value ? parseInt(document.getElementById('taskAssignee').value) : null,
+            deadline: deadlineVal ? new Date(deadlineVal).toISOString() : null,
+            priority: document.getElementById('taskPriority').value,
+            status: document.getElementById('taskStatus').value,
+            progress: parseInt(document.getElementById('taskProgress').value) || 0
+        };
+
+        if (!data.name) {
+            showToast('Vui lòng nhập tên nhiệm vụ', 'error');
+            return;
+        }
+    }
 
     try {
         if (id) {
@@ -163,7 +217,17 @@ async function deleteTask(id) {
     } catch (err) {}
 }
 
+// Events
+if (document.getElementById('searchTask')) {
+    document.getElementById('searchTask').addEventListener('input', function() {
+        clearTimeout(this._timer);
+        this._timer = setTimeout(loadTasks, 300);
+    });
+}
 document.getElementById('filterStatus').addEventListener('change', loadTasks);
 document.getElementById('filterPriority').addEventListener('change', loadTasks);
+if (document.getElementById('sortTask')) {
+    document.getElementById('sortTask').addEventListener('change', loadTasks);
+}
 
 loadData();

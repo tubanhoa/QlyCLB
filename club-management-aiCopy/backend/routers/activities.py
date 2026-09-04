@@ -16,10 +16,12 @@ router = APIRouter(prefix="/api/activities", tags=["Activities"])
 def get_activities(
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query("date"),
+    order: Optional[str] = Query("desc"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Lấy danh sách hoạt động"""
+    """Lấy danh sách hoạt động (hỗ trợ tìm kiếm, lọc và sắp xếp)"""
     query = db.query(Activity)
 
     if status:
@@ -28,10 +30,23 @@ def get_activities(
     if search:
         query = query.filter(
             (Activity.name.contains(search)) |
-            (Activity.description.contains(search))
+            (Activity.description.contains(search)) |
+            (Activity.location.contains(search))
         )
 
-    activities = query.order_by(Activity.date.desc()).all()
+    # Sắp xếp
+    sort_column = Activity.date
+    if sort_by == "name":
+        sort_column = Activity.name
+    elif sort_by == "id":
+        sort_column = Activity.id
+
+    if order == "asc":
+        query = query.order_by(sort_column.asc())
+    else:
+        query = query.order_by(sort_column.desc())
+
+    activities = query.all()
 
     result = []
     for a in activities:

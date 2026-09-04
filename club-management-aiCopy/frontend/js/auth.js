@@ -32,6 +32,19 @@ function requireAuth() {
     return true;
 }
 
+function requireRole(allowedRoles) {
+    if (!requireAuth()) return false;
+    const user = getUser();
+    if (!user || !allowedRoles.includes(user.role)) {
+        showToast('Bạn không có quyền truy cập vào trang này!', 'error');
+        setTimeout(() => {
+            window.location.href = '/dashboard.html';
+        }, 1200);
+        return false;
+    }
+    return true;
+}
+
 // ==================== API HELPER ====================
 async function apiCall(endpoint, method = 'GET', body = null) {
     const headers = {
@@ -285,3 +298,31 @@ function getSidebarHTML(activePage) {
     </div>
     `;
 }
+
+// ==================== FLOATING AI LAUNCHER ====================
+function initFloatingAILauncher() {
+    // Không hiện nếu đang ở trang chatbot
+    if (window.location.pathname.includes('chatbot.html')) return;
+    if (document.getElementById('floating-ai-launcher')) return;
+
+    const launcher = document.createElement('a');
+    launcher.id = 'floating-ai-launcher';
+    launcher.className = 'floating-ai-launcher';
+    launcher.href = '/chatbot.html';
+    launcher.target = '_blank';
+    launcher.title = 'Mở Trợ lý ảo UniClub Assistant';
+    launcher.innerHTML = `
+        <div class="floating-ai-avatar">🤖</div>
+        <span class="floating-ai-label">Hỏi Trợ lý AI</span>
+        <span class="floating-ai-ping"></span>
+    `;
+
+    document.body.appendChild(launcher);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFloatingAILauncher);
+} else {
+    initFloatingAILauncher();
+}
+

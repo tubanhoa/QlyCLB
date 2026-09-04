@@ -22,11 +22,25 @@ async function loadData() {
 
 async function loadActivities() {
     try {
-        const search = document.getElementById('searchInput').value;
+        const search = document.getElementById('searchInput').value.trim();
         const status = document.getElementById('filterStatus').value;
+        const sortVal = document.getElementById('sortActivity') ? document.getElementById('sortActivity').value : 'date_desc';
+
+        let sortBy = 'date';
+        let order = 'desc';
+        if (sortVal.startsWith('date_')) {
+            sortBy = 'date';
+            order = sortVal.replace('date_', '');
+        } else if (sortVal.startsWith('name_')) {
+            sortBy = 'name';
+            order = sortVal.replace('name_', '');
+        }
+
         let url = '/api/activities?';
         if (search) url += `search=${encodeURIComponent(search)}&`;
         if (status) url += `status=${status}&`;
+        if (sortBy) url += `sort_by=${sortBy}&`;
+        if (order) url += `order=${order}&`;
 
         allActivities = await apiCall(url) || [];
         renderTable();
@@ -158,5 +172,8 @@ document.getElementById('searchInput').addEventListener('input', function() {
     this._timer = setTimeout(loadActivities, 300);
 });
 document.getElementById('filterStatus').addEventListener('change', loadActivities);
+if (document.getElementById('sortActivity')) {
+    document.getElementById('sortActivity').addEventListener('change', loadActivities);
+}
 
 loadData();

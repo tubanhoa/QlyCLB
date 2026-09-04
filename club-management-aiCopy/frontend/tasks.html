@@ -25,6 +25,10 @@
                     <div class="table-header">
                         <h3>Danh sách nhiệm vụ</h3>
                         <div class="table-actions">
+                            <div class="search-box">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" class="form-control" id="searchTask" placeholder="Tìm kiếm nhiệm vụ...">
+                            </div>
                             <select class="form-control" id="filterStatus" style="width: auto;">
                                 <option value="">Tất cả trạng thái</option>
                                 <option value="not_started">Chưa bắt đầu</option>
@@ -38,6 +42,12 @@
                                 <option value="high">Cao</option>
                                 <option value="medium">Trung bình</option>
                                 <option value="low">Thấp</option>
+                            </select>
+                            <select class="form-control" id="sortTask" style="width: auto; min-width: 150px;">
+                                <option value="deadline_asc">Hạn chót: Gần nhất</option>
+                                <option value="deadline_desc">Hạn chót: Xa nhất</option>
+                                <option value="priority_desc">Ưu tiên cao nhất</option>
+                                <option value="progress_desc">Tiến độ cao nhất</option>
                             </select>
                             <button class="btn btn-primary manager-only" onclick="openAddTask()">➕ Thêm nhiệm vụ</button>
                         </div>

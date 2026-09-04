@@ -30,12 +30,31 @@ async function loadData() {
 
 async function loadMembers() {
     try {
-        const search = document.getElementById('searchInput').value;
+        const search = document.getElementById('searchInput').value.trim();
         const deptId = document.getElementById('filterDept').value;
+        const status = document.getElementById('filterStatus') ? document.getElementById('filterStatus').value : '';
+        const sortVal = document.getElementById('sortMember') ? document.getElementById('sortMember').value : 'id_asc';
+
+        // Phân tách sort_by và order từ giá trị select (vd: name_asc, join_date_desc)
+        let sortBy = 'id';
+        let order = 'asc';
+        if (sortVal.startsWith('name_')) {
+            sortBy = 'name';
+            order = sortVal.replace('name_', '');
+        } else if (sortVal.startsWith('join_date_')) {
+            sortBy = 'join_date';
+            order = sortVal.replace('join_date_', '');
+        } else if (sortVal.startsWith('id_')) {
+            sortBy = 'id';
+            order = sortVal.replace('id_', '');
+        }
 
         let url = '/api/members?';
         if (search) url += `search=${encodeURIComponent(search)}&`;
         if (deptId) url += `department_id=${deptId}&`;
+        if (status) url += `status=${status}&`;
+        if (sortBy) url += `sort_by=${sortBy}&`;
+        if (order) url += `order=${order}&`;
 
         allMembers = await apiCall(url) || [];
         renderTable();
@@ -119,6 +138,13 @@ async function saveMember() {
         return;
     }
 
+    // Kiểm tra định dạng email cơ bản
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(data.email)) {
+        showToast('Định dạng email không hợp lệ (VD: user@domain.com)', 'error');
+        return;
+    }
+
     try {
         if (id) {
             await apiCall(`/api/members/${id}`, 'PUT', data);
@@ -136,7 +162,7 @@ async function saveMember() {
 
 // Delete
 async function deleteMember(id) {
-    if (!confirm('Bạn có chắc chắn muốn xóa thành viên này?')) return;
+    if (!confirm('Bạn có chắc chắn muốn xóa thành viên này? Hành động này sẽ xóa dữ liệu liên quan.')) return;
 
     try {
         await apiCall(`/api/members/${id}`, 'DELETE');
@@ -167,14 +193,18 @@ async function viewDetail(id) {
             </div>
         `;
         openModal('detailModal');
-    } catch (err) {
-        // Error handled
-    }
+    } catch (err) {}
 }
 
 // Search & filter events
 document.getElementById('searchInput').addEventListener('input', debounce(loadMembers, 300));
 document.getElementById('filterDept').addEventListener('change', loadMembers);
+if (document.getElementById('filterStatus')) {
+    document.getElementById('filterStatus').addEventListener('change', loadMembers);
+}
+if (document.getElementById('sortMember')) {
+    document.getElementById('sortMember').addEventListener('change', loadMembers);
+}
 
 function debounce(fn, delay) {
     let timer;

@@ -5,10 +5,12 @@ Chạy: uvicorn main:app --reload --port 8000
 import os
 import sys
 from datetime import datetime, timedelta
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.exceptions import RequestValidationError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -30,6 +32,42 @@ app = FastAPI(
     description="API Backend cho hệ thống quản lý CLB sinh viên có tích hợp AI",
     version="1.0.0"
 )
+
+# ==================== Exception Handlers ====================
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Xử lý lỗi validate form / input từ Pydantic"""
+    errors = []
+    for err in exc.errors():
+        field = " -> ".join([str(x) for x in err.get("loc", []) if x != "body"])
+        msg = err.get("msg", "Dữ liệu không hợp lệ")
+        errors.append(f"Trường '{field}': {msg}" if field else msg)
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Dữ liệu không hợp lệ: " + "; ".join(errors), "errors": exc.errors()}
+    )
+
+@app.exception_handler(IntegrityError)
+async def integrity_exception_handler(request: Request, exc: IntegrityError):
+    """Xử lý lỗi vi phạm ràng buộc CSDL (trùng email, khóa ngoại...)"""
+    msg_str = str(exc.orig).lower() if hasattr(exc, "orig") else str(exc).lower()
+    detail = "Lỗi dữ liệu: Dữ liệu bị trùng lặp hoặc vi phạm ràng buộc CSDL."
+    if "unique" in msg_str:
+        detail = "Dữ liệu đã tồn tại trong hệ thống (email, username hoặc tên ban đã được sử dụng)."
+    elif "foreign key" in msg_str:
+        detail = "Dữ liệu liên kết (ban, hoạt động hoặc thành viên) không tồn tại."
+    return JSONResponse(
+        status_code=400,
+        content={"detail": detail}
+    )
+
+@app.exception_handler(SQLAlchemyError)
+async def db_exception_handler(request: Request, exc: SQLAlchemyError):
+    """Xử lý lỗi chung từ SQLAlchemy"""
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Đã xảy ra lỗi khi thao tác với cơ sở dữ liệu."}
+    )
 
 # ==================== CORS ====================
 app.add_middleware(
@@ -323,27 +361,88 @@ def startup():
 # ==================== Dashboard Stats API ====================
 @app.get("/api/dashboard/stats")
 def get_dashboard_stats():
-    """API thống kê cho dashboard"""
+    """API thống kê chi tiết cho dashboard và báo cáo nghiệp vụ"""
     db = SessionLocal()
     try:
         total_members = db.query(Member).filter(Member.status == "active").count()
+        total_inactive_members = db.query(Member).filter(Member.status == "inactive").count()
         total_departments = db.query(Department).count()
         total_activities = db.query(Activity).count()
         upcoming_activities = db.query(Activity).filter(Activity.status == "upcoming").count()
+        completed_activities = db.query(Activity).filter(Activity.status == "completed").count()
+        ongoing_activities = db.query(Activity).filter(Activity.status == "ongoing").count()
+
         total_tasks = db.query(Task).count()
         completed_tasks = db.query(Task).filter(Task.status == "completed").count()
         in_progress_tasks = db.query(Task).filter(Task.status == "in_progress").count()
+        not_started_tasks = db.query(Task).filter(Task.status == "not_started").count()
+        overdue_tasks = db.query(Task).filter(Task.status == "overdue").count()
         total_notifications = db.query(Notification).count()
+
+        # 1. Phân bổ thành viên theo ban chuyên môn
+        departments = db.query(Department).all()
+        dept_distribution = []
+        for d in departments:
+            count = db.query(Member).filter(Member.department_id == d.id, Member.status == "active").count()
+            dept_distribution.append({
+                "id": d.id,
+                "name": d.name,
+                "count": count
+            })
+        # Thành viên chưa phân ban
+        unassigned_count = db.query(Member).filter(Member.department_id == None, Member.status == "active").count()
+        if unassigned_count > 0:
+            dept_distribution.append({
+                "id": 0,
+                "name": "Chưa phân ban",
+                "count": unassigned_count
+            })
+
+        # 2. Phân bố nhiệm vụ theo trạng thái
+        task_distribution = {
+            "not_started": not_started_tasks,
+            "in_progress": in_progress_tasks,
+            "completed": completed_tasks,
+            "overdue": overdue_tasks
+        }
+
+        # 3. Thống kê tỷ lệ chuyên cần điểm danh các hoạt động
+        activities_with_attendance = db.query(Activity).all()
+        attendance_overview = []
+        for act in activities_with_attendance:
+            total_att = db.query(Attendance).filter(Attendance.activity_id == act.id).count()
+            if total_att > 0:
+                present = db.query(Attendance).filter(Attendance.activity_id == act.id, Attendance.status == "present").count()
+                absent = db.query(Attendance).filter(Attendance.activity_id == act.id, Attendance.status == "absent").count()
+                excused = db.query(Attendance).filter(Attendance.activity_id == act.id, Attendance.status == "excused").count()
+                rate = round((present / total_att * 100), 1)
+                attendance_overview.append({
+                    "activity_id": act.id,
+                    "activity_name": act.name,
+                    "total": total_att,
+                    "present": present,
+                    "absent": absent,
+                    "excused": excused,
+                    "rate": rate
+                })
 
         return {
             "total_members": total_members,
+            "total_inactive_members": total_inactive_members,
             "total_departments": total_departments,
             "total_activities": total_activities,
             "upcoming_activities": upcoming_activities,
+            "completed_activities": completed_activities,
+            "ongoing_activities": ongoing_activities,
             "total_tasks": total_tasks,
             "completed_tasks": completed_tasks,
             "in_progress_tasks": in_progress_tasks,
-            "total_notifications": total_notifications
+            "not_started_tasks": not_started_tasks,
+            "overdue_tasks": overdue_tasks,
+            "total_notifications": total_notifications,
+            "department_distribution": dept_distribution,
+            "task_distribution": task_distribution,
+            "attendance_overview": attendance_overview
         }
     finally:
         db.close()

@@ -26,10 +26,22 @@
                         <div class="table-actions">
                             <div class="search-box">
                                 <span class="search-icon">🔍</span>
-                                <input type="text" class="form-control" id="searchInput" placeholder="Tìm kiếm...">
+                                <input type="text" class="form-control" id="searchInput" placeholder="Tìm theo tên, email, SĐT...">
                             </div>
-                            <select class="form-control" id="filterDept" style="width: auto; min-width: 160px;">
+                            <select class="form-control" id="filterDept" style="width: auto; min-width: 140px;">
                                 <option value="">Tất cả ban</option>
+                            </select>
+                            <select class="form-control" id="filterStatus" style="width: auto; min-width: 140px;">
+                                <option value="">Tất cả trạng thái</option>
+                                <option value="active">Đang hoạt động</option>
+                                <option value="inactive">Ngừng hoạt động</option>
+                            </select>
+                            <select class="form-control" id="sortMember" style="width: auto; min-width: 150px;">
+                                <option value="id_asc">Sắp xếp: Mặc định</option>
+                                <option value="name_asc">Tên: A → Z</option>
+                                <option value="name_desc">Tên: Z → A</option>
+                                <option value="join_date_desc">Gia nhập: Mới nhất</option>
+                                <option value="join_date_asc">Gia nhập: Cũ nhất</option>
                             </select>
                             <button class="btn btn-primary admin-only" onclick="openAddModal()">➕ Thêm thành viên</button>
                         </div>
