@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Quản lý hoạt động - Hệ thống CLB Sinh viên">
+    <title>Hoạt động | CLB Manager</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+                    <h1 class="page-title"><span class="emoji">📅</span> Quản lý Hoạt động</h1>
+                </div>
+            </header>
+            <div class="page-content">
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Danh sách hoạt động</h3>
+                        <div class="table-actions">
+                            <div class="search-box">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" class="form-control" id="searchInput" placeholder="Tìm kiếm...">
+                            </div>
+                            <select class="form-control" id="filterStatus" style="width: auto;">
+                                <option value="">Tất cả trạng thái</option>
+                                <option value="upcoming">Sắp diễn ra</option>
+                                <option value="ongoing">Đang diễn ra</option>
+                                <option value="completed">Hoàn thành</option>
+                                <option value="cancelled">Đã hủy</option>
+                            </select>
+                            <button class="btn btn-primary admin-only" onclick="openAddActivity()">➕ Thêm hoạt động</button>
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tên hoạt động</th>
+                                    <th>Thời gian</th>
+                                    <th>Địa điểm</th>
+                                    <th>Phụ trách</th>
+                                    <th>Trạng thái</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activityTable">
+                                <tr><td colspan="7" class="empty-state"><p>Đang tải...</p></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Thêm/Sửa -->
+    <div class="modal-overlay" id="activityModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3 id="actModalTitle">Thêm hoạt động</h3>
+                <button class="modal-close" onclick="closeModal('activityModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="actEditId">
+                <div class="form-group">
+                    <label>Tên hoạt động *</label>
+                    <input type="text" class="form-control" id="actName" required>
+                </div>
+                <div class="form-group">
+                    <label>Mô tả</label>
+                    <textarea class="form-control" id="actDesc"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Thời gian</label>
+                        <input type="datetime-local" class="form-control" id="actDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Địa điểm</label>
+                        <input type="text" class="form-control" id="actLocation">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Người phụ trách</label>
+                        <select class="form-control" id="actManager">
+                            <option value="">-- Chọn --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Trạng thái</label>
+                        <select class="form-control" id="actStatus">
+                            <option value="upcoming">Sắp diễn ra</option>
+                            <option value="ongoing">Đang diễn ra</option>
+                            <option value="completed">Hoàn thành</option>
+                            <option value="cancelled">Đã hủy</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Ghi chú</label>
+                    <textarea class="form-control" id="actNotes"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Kết quả</label>
+                    <textarea class="form-control" id="actResult"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('activityModal')">Hủy</button>
+                <button class="btn btn-primary" onclick="saveActivity()">💾 Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Chi tiết -->
+    <div class="modal-overlay" id="actDetailModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>📋 Chi tiết hoạt động</h3>
+                <button class="modal-close" onclick="closeModal('actDetailModal')">✕</button>
+            </div>
+            <div class="modal-body" id="actDetailContent"></div>
+        </div>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/activities.js"></script>
+</body>
+</html>

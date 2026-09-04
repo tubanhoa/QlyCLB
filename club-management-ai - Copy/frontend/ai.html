@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI Assistant - Hệ thống CLB Sinh viên">
+    <title>AI Assistant | CLB Manager</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+                    <h1 class="page-title"><span class="emoji">🤖</span> AI Assistant</h1>
+                </div>
+            </header>
+            <div class="page-content">
+                <!-- AI Tabs -->
+                <div class="ai-tabs">
+                    <button class="ai-tab active" onclick="switchTab('notification')">📢 Sinh thông báo</button>
+                    <button class="ai-tab" onclick="switchTab('summarize')">📋 Tóm tắt hoạt động</button>
+                    <button class="ai-tab" onclick="switchTab('assign')">👥 Gợi ý phân công</button>
+                </div>
+
+                <!-- Tab 1: Sinh thông báo -->
+                <div class="ai-panel active" id="panel-notification">
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h3>📢 AI Sinh thông báo hoạt động</h3>
+                        </div>
+                        <div style="padding: 24px;">
+                            <div class="form-group">
+                                <label>Tên hoạt động *</label>
+                                <input type="text" class="form-control" id="ai-noti-name" placeholder="VD: Workshop Python cơ bản">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Thời gian</label>
+                                    <input type="text" class="form-control" id="ai-noti-time" placeholder="VD: 14h ngày 15/12/2024">
+                                </div>
+                                <div class="form-group">
+                                    <label>Địa điểm</label>
+                                    <input type="text" class="form-control" id="ai-noti-location" placeholder="VD: Phòng A301">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Nội dung chi tiết</label>
+                                <textarea class="form-control" id="ai-noti-content" placeholder="Mô tả thêm về hoạt động..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Đối tượng nhận</label>
+                                <input type="text" class="form-control" id="ai-noti-target" placeholder="VD: Tất cả thành viên / Ban Kỹ thuật">
+                            </div>
+                            <button class="btn btn-ai btn-lg" onclick="generateNotification()" id="btn-gen-noti">
+                                ✨ Sinh thông báo
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="ai-result" id="result-notification" style="display: none;">
+                        <h4>🤖 Kết quả từ AI</h4>
+                        <div id="result-notification-content"></div>
+                        <div style="margin-top: 16px; display: flex; gap: 10px;">
+                            <button class="btn btn-success" onclick="useNotification()">📨 Sử dụng thông báo</button>
+                            <button class="btn btn-outline" onclick="generateNotification()">🔄 Sinh lại</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Tóm tắt hoạt động -->
+                <div class="ai-panel" id="panel-summarize">
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h3>📋 AI Tóm tắt hoạt động</h3>
+                        </div>
+                        <div style="padding: 24px;">
+                            <div class="form-group">
+                                <label>Chọn hoạt động</label>
+                                <select class="form-control" id="ai-sum-activity" onchange="fillActivityData()">
+                                    <option value="">-- Chọn hoạt động hoặc nhập thủ công --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Tên hoạt động *</label>
+                                <input type="text" class="form-control" id="ai-sum-name">
+                            </div>
+                            <div class="form-group">
+                                <label>Mô tả</label>
+                                <textarea class="form-control" id="ai-sum-desc"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Ghi chú</label>
+                                <textarea class="form-control" id="ai-sum-notes"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Kết quả</label>
+                                <textarea class="form-control" id="ai-sum-result"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Phản hồi thành viên</label>
+                                <textarea class="form-control" id="ai-sum-feedback" placeholder="Nhập phản hồi từ thành viên (nếu có)"></textarea>
+                            </div>
+                            <button class="btn btn-ai btn-lg" onclick="summarizeActivity()" id="btn-summarize">
+                                ✨ Tóm tắt hoạt động
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="ai-result" id="result-summarize" style="display: none;">
+                        <h4>🤖 Tóm tắt từ AI</h4>
+                        <div id="result-summarize-content"></div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Gợi ý phân công -->
+                <div class="ai-panel" id="panel-assign">
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h3>👥 AI Gợi ý phân công nhiệm vụ</h3>
+                        </div>
+                        <div style="padding: 24px;">
+                            <div class="form-group">
+                                <label>Chọn hoạt động</label>
+                                <select class="form-control" id="ai-assign-activity">
+                                    <option value="">-- Chọn hoạt động --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Mô tả hoạt động (hoặc bổ sung thông tin)</label>
+                                <textarea class="form-control" id="ai-assign-info" placeholder="Mô tả chi tiết về hoạt động để AI gợi ý chính xác hơn"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Danh sách nhiệm vụ cần phân công</label>
+                                <textarea class="form-control" id="ai-assign-tasks" rows="4" placeholder="VD:&#10;- Thiết kế poster&#10;- Setup âm thanh&#10;- Viết kịch bản MC&#10;- Liên hệ sponsor"></textarea>
+                            </div>
+                            <button class="btn btn-ai btn-lg" onclick="suggestAssignment()" id="btn-assign">
+                                ✨ Gợi ý phân công
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="ai-result" id="result-assign" style="display: none;">
+                        <h4>🤖 Gợi ý phân công từ AI</h4>
+                        <div id="result-assign-content"></div>
+                        <div style="margin-top: 16px;">
+                            <button class="btn btn-success" onclick="confirmAssignment()">✅ Xác nhận phân công</button>
+                            <button class="btn btn-outline" onclick="suggestAssignment()">🔄 Gợi ý lại</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/ai.js"></script>
+</body>
+</html>

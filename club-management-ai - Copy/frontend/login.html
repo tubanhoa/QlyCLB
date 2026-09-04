@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Đăng nhập - Hệ thống Quản lý Câu lạc bộ Sinh viên">
+    <title>Đăng nhập | CLB Manager</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-logo">
+                <div class="logo-icon">🎓</div>
+                <h1>CLB Manager</h1>
+                <p>Hệ thống Quản lý Câu lạc bộ Sinh viên</p>
+            </div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Tài khoản</label>
+                    <input type="text" id="username" class="form-control" placeholder="Nhập tài khoản..." required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Mật khẩu</label>
+                    <input type="password" id="password" class="form-control" placeholder="Nhập mật khẩu..." required>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; justify-content: center; margin-top: 8px;">
+                    <span id="loginText">Đăng nhập</span>
+                    <span id="loginSpinner" class="spinner" style="display: none;"></span>
+                </button>
+            </form>
+
+            <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+                <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px;">Tài khoản demo:</p>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <button class="btn btn-ghost btn-sm" onclick="fillDemo('admin', 'admin123')" style="justify-content: flex-start;">
+                        👑 Chủ nhiệm: admin / admin123
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="fillDemo('truongban', 'truongban123')" style="justify-content: flex-start;">
+                        ⭐ Trưởng ban: truongban / truongban123
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="fillDemo('thanhvien', 'thanhvien123')" style="justify-content: flex-start;">
+                        👤 Thành viên: thanhvien / thanhvien123
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script>
+        // Nếu đã đăng nhập, redirect
+        if (isLoggedIn()) {
+            window.location.href = '/dashboard.html';
+        }
+
+        // Fill demo account
+        function fillDemo(username, password) {
+            document.getElementById('username').value = username;
+            document.getElementById('password').value = password;
+        }
+
+        // Login form
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            if (!username || !password) {
+                showToast('Vui lòng nhập đầy đủ thông tin', 'error');
+                return;
+            }
+
+            document.getElementById('loginText').style.display = 'none';
+            document.getElementById('loginSpinner').style.display = 'inline-block';
+
+            try {
+                const data = await apiCall('/api/auth/login', 'POST', { username, password });
+
+                if (data) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify({
+                        id: data.user_id,
+                        username: data.username,
+                        role: data.role,
+                        member_id: data.member_id
+                    }));
+
+                    showToast('Đăng nhập thành công!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/dashboard.html';
+                    }, 500);
+                }
+            } catch (err) {
+                // Error already handled by apiCall
+            } finally {
+                document.getElementById('loginText').style.display = 'inline';
+                document.getElementById('loginSpinner').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

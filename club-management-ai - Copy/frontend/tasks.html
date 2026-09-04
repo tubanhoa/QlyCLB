@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Quản lý nhiệm vụ - Hệ thống CLB Sinh viên">
+    <title>Nhiệm vụ | CLB Manager</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+                    <h1 class="page-title"><span class="emoji">📋</span> Quản lý Nhiệm vụ</h1>
+                </div>
+            </header>
+            <div class="page-content">
+                <!-- Stats -->
+                <div class="stats-grid" id="taskStats"></div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Danh sách nhiệm vụ</h3>
+                        <div class="table-actions">
+                            <select class="form-control" id="filterStatus" style="width: auto;">
+                                <option value="">Tất cả trạng thái</option>
+                                <option value="not_started">Chưa bắt đầu</option>
+                                <option value="in_progress">Đang thực hiện</option>
+                                <option value="completed">Hoàn thành</option>
+                                <option value="overdue">Quá hạn</option>
+                            </select>
+                            <select class="form-control" id="filterPriority" style="width: auto;">
+                                <option value="">Tất cả ưu tiên</option>
+                                <option value="urgent">Khẩn cấp</option>
+                                <option value="high">Cao</option>
+                                <option value="medium">Trung bình</option>
+                                <option value="low">Thấp</option>
+                            </select>
+                            <button class="btn btn-primary manager-only" onclick="openAddTask()">➕ Thêm nhiệm vụ</button>
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nhiệm vụ</th>
+                                    <th>Hoạt động</th>
+                                    <th>Người thực hiện</th>
+                                    <th>Ưu tiên</th>
+                                    <th>Tiến độ</th>
+                                    <th>Deadline</th>
+                                    <th>Trạng thái</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="taskTable">
+                                <tr><td colspan="9" class="empty-state"><p>Đang tải...</p></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Thêm/Sửa -->
+    <div class="modal-overlay" id="taskModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3 id="taskModalTitle">Thêm nhiệm vụ</h3>
+                <button class="modal-close" onclick="closeModal('taskModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="taskEditId">
+                <div class="form-group">
+                    <label>Tên nhiệm vụ *</label>
+                    <input type="text" class="form-control" id="taskName" required>
+                </div>
+                <div class="form-group">
+                    <label>Mô tả</label>
+                    <textarea class="form-control" id="taskDesc"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Hoạt động</label>
+                        <select class="form-control" id="taskActivity">
+                            <option value="">-- Chọn hoạt động --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Người thực hiện</label>
+                        <select class="form-control" id="taskAssignee">
+                            <option value="">-- Chọn người --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Deadline</label>
+                        <input type="datetime-local" class="form-control" id="taskDeadline">
+                    </div>
+                    <div class="form-group">
+                        <label>Mức độ ưu tiên</label>
+                        <select class="form-control" id="taskPriority">
+                            <option value="low">Thấp</option>
+                            <option value="medium" selected>Trung bình</option>
+                            <option value="high">Cao</option>
+                            <option value="urgent">Khẩn cấp</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Trạng thái</label>
+                        <select class="form-control" id="taskStatus">
+                            <option value="not_started">Chưa bắt đầu</option>
+                            <option value="in_progress">Đang thực hiện</option>
+                            <option value="completed">Hoàn thành</option>
+                            <option value="overdue">Quá hạn</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tiến độ (%)</label>
+                        <input type="number" class="form-control" id="taskProgress" min="0" max="100" value="0">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('taskModal')">Hủy</button>
+                <button class="btn btn-primary" onclick="saveTask()">💾 Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/tasks.js"></script>
+</body>
+</html>

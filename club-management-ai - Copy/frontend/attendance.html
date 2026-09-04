@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Quản lý điểm danh - Hệ thống CLB Sinh viên">
+    <title>Điểm danh | CLB Manager</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+                    <h1 class="page-title"><span class="emoji">✅</span> Quản lý Điểm danh</h1>
+                </div>
+            </header>
+            <div class="page-content">
+                <!-- Chọn hoạt động -->
+                <div class="table-container" style="margin-bottom: 24px;">
+                    <div class="table-header">
+                        <h3>Chọn hoạt động</h3>
+                    </div>
+                    <div style="padding: 20px;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Hoạt động</label>
+                                <select class="form-control" id="selectActivity">
+                                    <option value="">-- Chọn hoạt động --</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="display:flex; align-items:flex-end;">
+                                <button class="btn btn-primary" onclick="loadAttendance()">📋 Tải danh sách</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thống kê -->
+                <div class="stats-grid" id="attendanceStats" style="display: none;">
+                    <div class="stat-card">
+                        <div class="stat-icon green">✅</div>
+                        <div class="stat-info">
+                            <h3 id="stat-present">0</h3>
+                            <p>Có mặt</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon orange">⚠️</div>
+                        <div class="stat-info">
+                            <h3 id="stat-excused">0</h3>
+                            <p>Có phép</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon pink">❌</div>
+                        <div class="stat-info">
+                            <h3 id="stat-absent">0</h3>
+                            <p>Vắng</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon blue">📊</div>
+                        <div class="stat-info">
+                            <h3 id="stat-rate">0%</h3>
+                            <p>Tỷ lệ tham gia</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bảng điểm danh -->
+                <div class="table-container" id="attendanceTable" style="display: none;">
+                    <div class="table-header">
+                        <h3 id="attendanceTitle">Điểm danh</h3>
+                        <button class="btn btn-success" onclick="saveAllAttendance()">💾 Lưu điểm danh</button>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Họ tên</th>
+                                    <th>Ban</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendanceBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/attendance.js"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Quản lý thông báo - Hệ thống CLB Sinh viên">
+    <title>Thông báo | CLB Manager</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+                    <h1 class="page-title"><span class="emoji">🔔</span> Quản lý Thông báo</h1>
+                </div>
+                <div class="topbar-actions admin-only">
+                    <button class="btn btn-ai" onclick="window.location.href='/ai.html'">✨ Sinh thông báo bằng AI</button>
+                    <button class="btn btn-primary" onclick="openAddNotification()">➕ Tạo thông báo</button>
+                </div>
+            </header>
+            <div class="page-content">
+                <div id="notificationsList">
+                    <p style="text-align: center; color: var(--text-muted); padding: 40px;">Đang tải...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Thêm/Sửa -->
+    <div class="modal-overlay" id="notiModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3 id="notiModalTitle">Tạo thông báo</h3>
+                <button class="modal-close" onclick="closeModal('notiModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="notiEditId">
+                <div class="form-group">
+                    <label>Tiêu đề *</label>
+                    <input type="text" class="form-control" id="notiTitle" required>
+                </div>
+                <div class="form-group">
+                    <label>Nội dung *</label>
+                    <textarea class="form-control" id="notiContent" rows="6" required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('notiModal')">Hủy</button>
+                <button class="btn btn-primary" onclick="saveNotification()">💾 Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/notifications.js"></script>
+</body>
+</html>

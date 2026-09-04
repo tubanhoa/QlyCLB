@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="UniClub Assistant - Trợ lý ảo thông minh hỗ trợ sinh viên tìm hiểu về Câu lạc bộ">
+    <title>UniClub Assistant | Trợ lý CLB Sinh viên</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="chatbot-page">
+        <!-- Header -->
+        <header class="chatbot-header" id="chatbot-header">
+            <div class="chatbot-header-inner">
+                <div class="chatbot-header-left">
+                    <div class="chatbot-avatar-lg">
+                        <span class="chatbot-avatar-pulse"></span>
+                        🤖
+                    </div>
+                    <div class="chatbot-header-info">
+                        <h1>UniClub Assistant</h1>
+                        <p><span class="status-dot"></span> Trợ lý ảo CLB Sinh viên — Luôn sẵn sàng hỗ trợ bạn!</p>
+                    </div>
+                </div>
+                <a href="/login.html" class="btn btn-outline chatbot-login-btn" id="btn-go-system">
+                    🔐 Vào hệ thống
+                </a>
+            </div>
+        </header>
+
+        <!-- Chat Area -->
+        <main class="chatbot-main" id="chat-area">
+            <div class="chatbot-messages" id="chat-messages">
+                <!-- Welcome message injected by JS -->
+            </div>
+        </main>
+
+        <!-- Input Area -->
+        <footer class="chatbot-input-area" id="chatbot-input-area">
+            <div class="chatbot-input-inner">
+                <div class="chatbot-input-wrapper">
+                    <textarea
+                        id="chat-input"
+                        placeholder="Hỏi bất cứ điều gì về CLB..."
+                        rows="1"
+                        maxlength="500"
+                    ></textarea>
+                    <button class="chatbot-send-btn" id="btn-send" onclick="sendMessage()" title="Gửi tin nhắn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+                <div class="chatbot-input-hint">
+                    Nhấn <kbd>Enter</kbd> để gửi · <kbd>Shift+Enter</kbd> để xuống dòng
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/js/chatbot.js"></script>
+</body>
+</html>

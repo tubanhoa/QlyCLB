@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Quản lý ban chuyên môn - Hệ thống CLB Sinh viên">
+    <title>Ban chuyên môn | CLB Manager</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+                    <h1 class="page-title"><span class="emoji">🏢</span> Quản lý Ban chuyên môn</h1>
+                </div>
+            </header>
+            <div class="page-content">
+                <div class="stats-grid" id="deptStats"></div>
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Danh sách ban</h3>
+                        <button class="btn btn-primary" onclick="openAddDept()">➕ Thêm ban</button>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tên ban</th>
+                                    <th>Mô tả</th>
+                                    <th>Trưởng ban</th>
+                                    <th>Số thành viên</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deptTable">
+                                <tr><td colspan="6" class="empty-state"><p>Đang tải...</p></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Thêm/Sửa -->
+    <div class="modal-overlay" id="deptModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="deptModalTitle">Thêm ban</h3>
+                <button class="modal-close" onclick="closeModal('deptModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="deptEditId">
+                <div class="form-group">
+                    <label>Tên ban *</label>
+                    <input type="text" class="form-control" id="deptName" required>
+                </div>
+                <div class="form-group">
+                    <label>Mô tả</label>
+                    <textarea class="form-control" id="deptDesc"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Trưởng ban</label>
+                    <select class="form-control" id="deptLeader">
+                        <option value="">-- Chọn trưởng ban --</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('deptModal')">Hủy</button>
+                <button class="btn btn-primary" onclick="saveDept()">💾 Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Chi tiết -->
+    <div class="modal-overlay" id="deptDetailModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>📋 Chi tiết ban</h3>
+                <button class="modal-close" onclick="closeModal('deptDetailModal')">✕</button>
+            </div>
+            <div class="modal-body" id="deptDetailContent"></div>
+        </div>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/departments.js"></script>
+</body>
+</html>
