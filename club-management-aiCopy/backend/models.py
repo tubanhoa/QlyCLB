@@ -135,3 +135,52 @@ class AIRequest(Base):
     input_data = Column(Text, nullable=False)
     output_data = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class FAQ(Base):
+    """Bảng faqs - Nguồn dữ liệu RAG cho câu hỏi thường gặp"""
+    __tablename__ = "faqs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    question = Column(String(500), nullable=False)
+    answer = Column(Text, nullable=False)
+    category = Column(String(100), nullable=True)
+    is_active = Column(String(20), default="active")
+
+
+class ScheduledPost(Base):
+    """Bảng scheduled_posts - Nội dung truyền thông được lên lịch"""
+    __tablename__ = "scheduled_posts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(Text, nullable=False)
+    scheduled_at = Column(DateTime, nullable=False)
+    status = Column(String(20), default="scheduled")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class FinancialTransaction(Base):
+    """Bảng financial_transactions - Lịch sử thu chi của CLB"""
+    __tablename__ = "financial_transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    description = Column(String(300), nullable=False)
+    amount = Column(Float, nullable=False)
+    transaction_type = Column(String(20), nullable=False)  # income, expense
+    member_id = Column(Integer, ForeignKey("members.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    member = relationship("Member")
+
+
+class MemberFee(Base):
+    """Bảng member_fees - Trạng thái đóng quỹ theo thành viên"""
+    __tablename__ = "member_fees"
+
+    id = Column(Integer, primary_key=True, index=True)
+    member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
+    amount = Column(Float, nullable=False)
+    status = Column(String(20), default="unpaid")  # paid, unpaid
+    due_date = Column(DateTime, nullable=True)
+
+    member = relationship("Member")

@@ -4,21 +4,27 @@ Trợ lý ảo thông minh cho Hệ thống Quản lý Câu lạc bộ Sinh viê
 """
 import json
 import os
+from datetime import datetime
+from typing import Any, Callable
 from sqlalchemy.orm import Session
-from models import Department, Activity, Member, Notification
-from services.ai_service import call_openai
+from models import (
+    Department, Activity, Member, Notification, Attendance, FAQ,
+    ScheduledPost, FinancialTransaction, MemberFee
+)
+from services.ai_service import call_openai, call_openai_with_tools
 
 # ==================== SYSTEM PROMPT ====================
-UNICLUB_SYSTEM_PROMPT = """Bạn là "UniClub Assistant" – Trợ lý ảo thông minh và thân thiện của Hệ thống Quản lý Câu lạc bộ Sinh viên.
+CLUBAI_SYSTEM_PROMPT = """Bạn là ClubAI, một Trợ lý quản lý Câu lạc bộ thông minh. Nhiệm vụ của bạn là hỗ trợ Ban chủ nhiệm và Hội viên thông qua việc gọi các hàm (Function Calling/Tools) có sẵn trong hệ thống.
 
-NHIỆM VỤ CHÍNH:
-1. Giải đáp các thắc mắc của sinh viên về quy chế hoạt động, quyền lợi, cách đăng ký, thời gian sinh hoạt, và các sự kiện của câu lạc bộ.
-2. Tư vấn, định hướng câu lạc bộ phù hợp dựa trên sở thích, chuyên ngành, định hướng phát triển hoặc quỹ thời gian của sinh viên.
-3. Hướng dẫn sinh viên cách sử dụng hệ thống (điểm danh QR code, nộp đơn ứng tuyển, theo dõi điểm rèn luyện).
+QUY TẮC HOẠT ĐỘNG:
+1. Khi hỏi về tình trạng hội viên, gọi get_member_stats(member_id) và đánh giá gắn bó Cao/Trung bình/Thấp.
+2. Khi được yêu cầu viết thông báo, viết ngắn gọn, chuyên nghiệp và gọi schedule_post(content, time). Câu hỏi thông tin chung dùng dữ liệu FAQ và database được cung cấp.
+3. Khi lên kế hoạch sự kiện, gọi get_historical_events(type) để dự đoán số người và chi phí hậu cần.
+4. Khi truy vấn quỹ, gọi get_financial_report(). Khi cần nhắc phí, gọi send_fee_reminder(member_id, amount).
 
 QUY TẮC PHẢN HỒI:
-- Giọng văn: Năng động, lịch sự, tích cực, gần gũi và mang đậm phong cách sinh viên đại học.
-- Độ chính xác: Chỉ cung cấp thông tin dựa trên dữ liệu hệ thống được cung cấp (CLB Context Data). Nếu không có thông tin cụ thể, hãy hướng dẫn sinh viên liên hệ trực tiếp Fanpage hoặc Ban chủ nhiệm CLB đó.
+- Chỉ cung cấp thông tin dựa trên dữ liệu hệ thống. Không tự bịa số liệu tài chính nếu tool không trả về kết quả.
+- Chỉ trả lời các vấn đề liên quan đến câu lạc bộ.
 - Định dạng câu trả lời: Rõ ràng, sử dụng bullet points (- hoặc *) cho các ý chính, tránh viết đoạn văn quá dài gây khó đọc.
 - Giới hạn: Không bịa đặt thông tin về lệ phí quỹ, ban chủ nhiệm nếu chưa có trong dữ liệu; không trả lời các chủ đề ngoài phạm vi trường học/CLB.
 
@@ -44,6 +50,109 @@ Lưu ý:
 - followUpQuestions luôn có 2-3 câu hỏi gợi ý liên quan.
 - answer hỗ trợ Markdown: **bold**, *italic*, - bullet points.
 """
+
+
+def _tool_schema(name: str, description: str, properties: dict, required: list) -> dict:
+    return {
+        "type": "function",
+        "function": {
+            "name": name,
+            "description": description,
+            "parameters": {"type": "object", "properties": properties, "required": required}
+        }
+    }
+
+
+CLUBAI_TOOLS = [
+    _tool_schema("get_member_stats", "Lấy thống kê điểm danh và mức độ gắn bó của hội viên.",
+                 {"member_id": {"type": "integer"}}, ["member_id"]),
+    _tool_schema("analyze_member_engagement", "Tính điểm gắn bó dựa trên số lần tham gia sự kiện.",
+                 {"member_id": {"type": "integer"}}, ["member_id"]),
+    _tool_schema("schedule_post", "Lưu một thông báo để đăng vào thời gian chỉ định.",
+                 {"content": {"type": "string"}, "time": {"type": "string"}}, ["content", "time"]),
+    _tool_schema("get_historical_events", "Lấy dữ liệu hoạt động cũ theo loại để dự báo sự kiện.",
+                 {"type": {"type": "string"}}, ["type"]),
+    _tool_schema("get_financial_report", "Tổng hợp thu, chi và số dư từ sổ quỹ.", {}, []),
+    _tool_schema("send_fee_reminder", "Tạo bản ghi nhắc phí thân thiện cho một hội viên.",
+                 {"member_id": {"type": "integer"}, "amount": {"type": "number"}}, ["member_id", "amount"]),
+    _tool_schema("generate_financial_reminder", "Sinh nội dung nhắc phí cá nhân hóa cho danh sách hội viên chưa đóng quỹ.",
+                 {"user_list": {"type": "array", "items": {"type": "integer"}}}, ["user_list"]),
+]
+
+
+def _member_stats(db: Session, member_id: int) -> dict:
+    member = db.query(Member).filter(Member.id == member_id).first()
+    if not member:
+        return {"error": "Không tìm thấy hội viên."}
+    total = db.query(Attendance).filter(Attendance.member_id == member_id).count()
+    present = db.query(Attendance).filter(
+        Attendance.member_id == member_id, Attendance.status == "present"
+    ).count()
+    score = round(present / total * 100, 2) if total else 0
+    level = "Cao" if score >= 75 else "Trung bình" if score >= 40 else "Thấp"
+    return {"member_id": member_id, "member_name": member.name, "events_attended": present,
+            "events_recorded": total, "engagement_score": score, "engagement_level": level}
+
+
+def _tool_handlers(db: Session) -> dict[str, Callable[..., Any]]:
+    def schedule_post(content: str, time: str) -> dict:
+        try:
+            scheduled_at = datetime.fromisoformat(time.replace("Z", "+00:00"))
+        except ValueError:
+            return {"error": "time phải là ISO-8601 hợp lệ."}
+        post = ScheduledPost(content=content, scheduled_at=scheduled_at)
+        db.add(post)
+        db.commit()
+        return {"scheduled_post_id": post.id, "status": post.status, "scheduled_at": time}
+
+    def historical_events(event_type: str) -> dict:
+        activities = db.query(Activity).filter(Activity.status == "completed").all()
+        matching = [a for a in activities if not event_type or event_type.lower() in a.name.lower()]
+        counts = []
+        for activity in matching:
+            present = db.query(Attendance).filter(
+                Attendance.activity_id == activity.id, Attendance.status == "present"
+            ).count()
+            counts.append({"name": activity.name, "participants": present, "notes": activity.notes})
+        average = round(sum(item["participants"] for item in counts) / len(counts), 2) if counts else 0
+        return {"type": event_type, "events": counts, "average_participants": average}
+
+    def financial_report() -> dict:
+        transactions = db.query(FinancialTransaction).all()
+        income = sum(t.amount for t in transactions if t.transaction_type == "income")
+        expense = sum(t.amount for t in transactions if t.transaction_type == "expense")
+        return {"income": income, "expense": expense, "balance": income - expense,
+                "transaction_count": len(transactions)} if transactions else {"error": "Chưa có dữ liệu tài chính."}
+
+    def fee_reminder(member_id: int, amount: float) -> dict:
+        member = db.query(Member).filter(Member.id == member_id).first()
+        if not member:
+            return {"error": "Không tìm thấy hội viên."}
+        reminder = (f"Chào {member.name}, CLB thân mời bạn hoàn tất khoản quỹ "
+                    f"{amount:,.0f} VNĐ. Cảm ơn bạn đã đồng hành cùng CLB!")
+        return {"member_id": member_id, "amount": amount, "message": reminder, "status": "ready"}
+
+    def financial_reminders(user_list: list[int]) -> dict:
+        reminders = []
+        for member_id in user_list:
+            fee = db.query(MemberFee).filter(
+                MemberFee.member_id == member_id, MemberFee.status == "unpaid"
+            ).order_by(MemberFee.id.desc()).first()
+            if fee:
+                reminders.append(fee_reminder(member_id, fee.amount))
+            else:
+                reminders.append({"member_id": member_id, "error": "Không có khoản phí chưa thanh toán."})
+        return {"reminders": reminders}
+
+    return {
+        "get_member_stats": lambda member_id: _member_stats(db, member_id),
+        "analyze_member_engagement": lambda member_id: _member_stats(db, member_id),
+        "schedule_post": schedule_post,
+        "get_historical_events": historical_events,
+        "get_financial_report": financial_report,
+        "send_fee_reminder": fee_reminder,
+        "generate_financial_reminder": financial_reminders,
+    }
 
 
 def build_club_context(db: Session) -> str:
@@ -101,6 +210,13 @@ def build_club_context(db: Session) -> str:
         for noti in notifications:
             date_str = noti.created_at.strftime("%d/%m/%Y") if noti.created_at else ""
             context_parts.append(f"- [{date_str}] {noti.title}: {noti.content[:100]}...")
+
+    # --- FAQ knowledge base (RAG context) ---
+    faqs = db.query(FAQ).filter(FAQ.is_active == "active").all()
+    if faqs:
+        context_parts.append("\n=== FAQ / KIẾN THỨC CLB ===")
+        for faq in faqs:
+            context_parts.append(f"- {faq.question}: {faq.answer}")
 
     # --- System features ---
     context_parts.append("\n=== TÍNH NĂNG HỆ THỐNG ===")
@@ -271,20 +387,42 @@ async def chat_with_assistant(message: str, db: Session) -> dict:
         # Demo mode
         return _generate_demo_chat_response(message)
 
-    # Build user prompt with context
-    user_prompt = (
-        f"DỮ LIỆU HỆ THỐNG (CLB Context Data):\n"
-        f"{club_context}\n\n"
-        f"---\n\n"
-        f"CÂU HỎI CỦA SINH VIÊN:\n{message}\n\n"
-        f"Hãy trả lời theo đúng định dạng JSON đã quy định."
-    )
-
     try:
-        raw_result = await call_openai(UNICLUB_SYSTEM_PROMPT, user_prompt)
+        messages = [
+            {"role": "system", "content": CLUBAI_SYSTEM_PROMPT},
+            {"role": "user", "content": (
+                f"DỮ LIỆU HỆ THỐNG (CLB Context Data):\n{club_context}\n\n"
+                f"CÂU HỎI CỦA NGƯỜI DÙNG:\n{message}\n\n"
+                "Hãy trả lời theo đúng định dạng JSON đã quy định."
+            )}
+        ]
+        handlers = _tool_handlers(db)
+        for _ in range(5):
+            assistant_message = await call_openai_with_tools(messages, CLUBAI_TOOLS)
+            tool_calls = assistant_message.get("tool_calls") or []
+            if not tool_calls:
+                return _parse_ai_response(assistant_message.get("content") or "")
 
-        # Try to parse JSON from response
-        return _parse_ai_response(raw_result)
+            messages.append(assistant_message)
+            for tool_call in tool_calls:
+                function = tool_call["function"]
+                name = function["name"]
+                if name not in handlers:
+                    result = {"error": f"Tool không tồn tại: {name}"}
+                else:
+                    try:
+                        arguments = json.loads(function.get("arguments", "{}"))
+                        result = handlers[name](**arguments)
+                    except (json.JSONDecodeError, TypeError, ValueError) as error:
+                        result = {"error": f"Tham số tool không hợp lệ: {error}"}
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call["id"],
+                    "name": name,
+                    "content": json.dumps(result, ensure_ascii=False)
+                })
+        return {"answer": "AI không hoàn tất được yêu cầu sau nhiều lần gọi tool.",
+                "suggestedClubs": [], "followUpQuestions": []}
 
     except Exception as e:
         # Fallback to demo response on error

@@ -47,6 +47,38 @@ async def call_openai(system_prompt: str, user_prompt: str) -> str:
         return f"Lỗi kết nối AI: {str(e)}"
 
 
+async def call_openai_with_tools(messages: list, tools: list) -> dict:
+    """Gọi Chat Completions API và giữ nguyên message/tool-call metadata."""
+    if not OPENAI_API_KEY:
+        return {"role": "assistant", "content": None}
+
+    try:
+        import httpx
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENAI_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+                    "messages": messages,
+                    "tools": tools,
+                    "tool_choice": "auto",
+                    "temperature": 0.3,
+                    "max_tokens": 1200,
+                    "response_format": {"type": "json_object"}
+                },
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return response.json()["choices"][0]["message"]
+    except Exception as e:
+        raise RuntimeError(f"Lỗi kết nối AI: {str(e)}") from e
+
+
 def _generate_demo_response(user_prompt: str) -> str:
     """Tạo response demo khi không có API key"""
     if "thông báo" in user_prompt.lower() or "thông báo" in user_prompt:

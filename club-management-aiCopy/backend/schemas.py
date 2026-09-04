@@ -233,6 +233,14 @@ class AIResponse(BaseModel):
 class ChatRequest(BaseModel):
     message: str
 
+
+class AnalyzeMemberEngagementRequest(BaseModel):
+    member_id: int
+
+
+class FinancialReminderRequest(BaseModel):
+    user_list: List[int]
+
 class SuggestedClub(BaseModel):
     maDinhDanh: str
     tenClb: str
